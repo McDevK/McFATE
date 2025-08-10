@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>McFATE - F.A.T.E.计时器</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="./assets/icons/favicon/favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-theme="light">
+  <main class="fate-container" id="fateContainer">
+    <header class="fate-header">
+      <div class="fate-title"><img src="./assets/icons/button/FATE.png" alt="FATE" class="fate-logo"><span>QQ14 F.A.T.E.计时器</span></div>
+      <div class="fate-actions">
+        
+        <button class="fate-btn fate-theme-toggle" id="themeToggle" title="白天/夜晚" aria-label="白天/夜晚">
+          <i class="fas fa-sun"></i>
+        </button>
+      </div>
+    </header>
+    <section class="fate-body" id="fateBody">
+      
+      
+      <!-- 当前艾欧泽亚时间和天气显示 -->
+      <div class="current-status" id="currentStatus">
+        <div class="status-time">
+          <span class="status-label">艾欧泽亚时间：</span>
+          <span class="status-value" id="eorzeaTime">--:--</span>
+        </div>
+        <div class="status-weather">
+          <span class="status-label">当前天气变化：</span>
+          <span class="status-value" id="weatherCountdown">计算中...</span>
+        </div>
+      </div>
+
+      <!-- FATE列表 -->
+      <div class="fate-list" id="fateList">
+        <div class="loading-state">
+          <i class="fas fa-spinner fa-spin"></i>
+          <p>正在加载FATE数据...</p>
+        </div>
+      </div>
+    </section>
+    <footer class="fate-footer" id="fateFooter">
+      <div class="footer-body">
+        <div class="footer-left">
+          <span class="footer-title">数据来源<br></span>
+          <span class="footer-text">苏烟Suyn <br> 桑尼米尔克🌸日影地修炼所 <br> 初舞🌸天幕魔导城 <br> 静希肥肥十郎🌸天幕魔导城</span>
+        </div>
+        <div class="footer-right">
+          <span class="footer-note">数据仅保存在本地浏览器</span>
+        </div>
+      </div>
+    </footer>
+  </main>
+  <script src="script.js"></script>
+  <script>
+    // Service Worker 注册
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('sw.js')
+          .then(function(registration) {
+            console.log('SW registered: ', registration);
+          })
+          .catch(function(registrationError) {
+            console.log('SW registration failed: ', registrationError);
+          });
+      });
+    }
+  </script>
+</body>
+</html>

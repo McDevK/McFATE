@@ -1,0 +1,465 @@
+/* McFATE FATE计时器样式 - 基于McWeather */
+/* 与 McCalculator 移动端完全一致的配色变量 */
+:root {
+  --color-bg-main: #F5F2E9;
+  --color-bg-dark: #FEFBF6;
+  --color-bg-calc: #FFFFFF;
+  --color-border-main: #8B6B3D;
+  --color-text-main: #634726;
+  --color-btn-bg: #F5F2E9;
+  --color-btn-border: #D4C4A7;
+  --color-icon-bg: #4A4166;
+  --color-level-text: #FFB648;
+  --color-folder-header: #8B6B3D;
+  --color-completed: #8B8B8B;
+  --color-primary: #8B6B3D;
+  --color-secondary: #C9A86A;
+  --color-accent: #E7D7B1;
+  --color-bg-light: #F0E6D2;
+  --color-text-secondary: #5a4a3a;
+}
+
+/* 夜间模式与 McCalculator 一致 */
+[data-theme="dark"] {
+  --color-bg-main: #181411;
+  --color-bg-dark: #181411;
+  --color-bg-calc: #2A2320;
+  --color-border-main: #C9A86A;
+  --color-text-main: #F5ECD7;
+  --color-btn-bg: #3A322C;
+  --color-btn-border: #C9A86A;
+  --color-icon-bg: #4A4166;
+  --color-level-text: #FFB648;
+  --color-folder-header: #C9A86A;
+  --color-completed: #8B8B8B;
+  --color-primary: #2A2320;
+  --color-secondary: #C9A86A;
+  --color-accent: #E7D7B1;
+  --color-bg-light: #2A2320;
+  --color-text-secondary: #b8a98a;
+}
+
+html, body { height: 100%; }
+body {
+  margin: 0; padding: 0; font-family: 'Noto Sans SC', sans-serif;
+  background: linear-gradient(135deg, var(--color-bg-main) 0%, var(--color-bg-light) 100%);
+  color: var(--color-text-main);
+  min-height: 100vh; display: flex; flex-direction: column;
+}
+
+.fate-container { max-width: 720px; margin: 0 auto; padding: 16px; flex: 1 1 auto; display:flex; flex-direction: column; box-sizing: border-box; }
+
+.fate-header { 
+  display:flex; align-items:center; justify-content:space-between; 
+  padding: 10px 0; margin-bottom: 16px;
+}
+
+.fate-title { 
+  display:flex; align-items:center; gap:8px; 
+  color: var(--color-secondary); font-weight:700; font-size: 18px; 
+}
+.fate-title .fate-logo { width: 22px; height: 22px; object-fit: contain; display:inline-block; }
+
+.fate-actions { 
+  display:inline-flex; align-items:center; gap:8px; 
+}
+
+.fate-btn { 
+  display:inline-flex; align-items:center; justify-content:center; 
+  color: var(--color-secondary); background: transparent; 
+  border: 2px solid var(--color-secondary); border-radius: 10px; 
+  width:44px; height:34px; cursor:pointer; position: relative; 
+  overflow: hidden; transition: all .2s ease; 
+}
+
+.fate-btn.active { 
+  background: var(--color-secondary); 
+  color: var(--color-bg-main); 
+  border-color: var(--color-secondary); 
+  box-shadow: 0 0 0 2px rgba(201,168,106,0.35), 0 4px 16px rgba(201,168,106,0.35); 
+  transform: translateY(-1px); 
+}
+
+.fate-btn:hover {
+  background: rgba(201,168,106,0.1);
+}
+
+.fate-btn.active:hover {
+  background: var(--color-secondary);
+}
+
+.fate-body { background: rgba(0,0,0,0.2); border: 1px solid var(--color-border-main); border-radius: 12px; padding: 12px; flex: 1 1 auto; display:flex; flex-direction: column; overflow:hidden; box-sizing: border-box; }
+
+/* 筛选面板 */
+.fate-filters {
+  display: none;
+  background: var(--color-bg-dark);
+  border: 1px solid var(--color-border-main);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  gap: 12px;
+  flex-direction: column;
+}
+
+.fate-filters.show {
+  display: flex;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-group label {
+  font-weight: 600;
+  color: var(--color-text-main);
+  min-width: 80px;
+  font-size: 14px;
+}
+
+.fate-select {
+  flex: 1;
+  min-width: 150px;
+  height: 36px;
+  border-radius: 8px;
+  border: 2px solid var(--color-border-main);
+  background: var(--color-bg-light);
+  color: var(--color-text-main);
+  padding: 0 12px;
+  font-size: 14px;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  padding: 6px 12px;
+  border: 2px solid var(--color-border-main);
+  border-radius: 6px;
+  background: var(--color-bg-light);
+  color: var(--color-text-main);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.filter-btn:hover {
+  background: var(--color-secondary);
+  color: var(--color-bg-main);
+}
+
+.filter-btn.active {
+  background: var(--color-secondary);
+  color: var(--color-bg-main);
+  border-color: var(--color-secondary);
+}
+
+/* 当前状态显示 */
+.current-status {
+  display: flex;
+  gap: 16px;
+  padding: 12px;
+  background: var(--color-bg-dark);
+  border: 1px solid var(--color-border-main);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.status-time, .status-weather {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 200px;
+}
+
+.status-label {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+.status-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-main);
+  font-variant-numeric: tabular-nums;
+}
+
+/* FATE列表 */
+.fate-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  max-height: 600px;
+}
+
+.fate-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--color-bg-dark);
+  border: 1px solid var(--color-border-main);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.fate-item:hover {
+  border-color: var(--color-secondary);
+  box-shadow: 0 2px 8px rgba(201,168,106,0.2);
+}
+
+/* 已完成条目样式 */
+.fate-item.goal-completed { opacity: .6; filter: grayscale(40%); transition: opacity .2s ease; }
+.goal-block.completed { background: rgba(0,0,0,0.03); }
+.goal-countdown.completed { background: #e9ecef; color: #555; border:1px solid #cfcfcf; }
+
+.fate-header-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.fate-header-info { cursor: pointer; }
+
+.fate-main-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.fate-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-main);
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+
+.fate-location {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.fate-requirements {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.requirement-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--color-bg-light);
+  border: 1px solid var(--color-border-main);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.requirement-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.requirement-label {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  min-width: 80px;
+}
+
+.requirement-value {
+  color: var(--color-text-main);
+  font-weight: 500;
+}
+
+.requirement-status {
+  margin-left: auto;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.requirement-status.active {
+  background: rgba(46,160,67,0.2);
+  color: #28a745;
+  border: 1px solid #28a745;
+}
+
+.requirement-status.pending {
+  background: rgba(217,83,79,0.2);
+  color: #d9534f;
+  border: 1px solid #d9534f;
+}
+
+.requirement-status.unknown {
+  background: rgba(108,117,125,0.2);
+  color: #6c757d;
+  border: 1px solid #6c757d;
+}
+
+/* 目标容器（包含出现与目标条件 + 右侧倒计时） */
+.goal-block {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 2px solid var(--color-border-main);
+  border-radius: 10px;
+  background: var(--color-bg-light);
+}
+.goal-left {
+  display: grid;
+  grid-auto-rows: minmax(18px, auto);
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.goal-line{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.goal-line .goal-label { font-weight: 700; color: var(--color-text-secondary); min-width: 48px; }
+.goal-line .goal-value { color: var(--color-text-main); font-weight: 600; }
+
+.goal-right { display:flex; align-items:center; justify-content:center; }
+.goal-countdown {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 8px;
+  min-width: 150px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.goal-countdown.active { background: rgba(46,160,67,0.2); color: #28a745; border:1px solid #28a745; }
+.goal-countdown.pending { background: rgba(217,83,79,0.2); color: #d9534f; border:1px solid #d9534f; }
+
+/* 倒计时显示 */
+.fate-countdown {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 120px;
+  justify-content: center;
+}
+
+.fate-countdown.active {
+  background: rgba(46,160,67,0.2);
+  color: #28a745;
+  border: 1px solid #28a745;
+}
+
+.fate-countdown.pending {
+  background: rgba(217,83,79,0.2);
+  color: #d9534f;
+  border: 1px solid #d9534f;
+}
+
+/* 加载和空状态 */
+.loading-state, .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.loading-state i, .empty-state i {
+  font-size: 32px;
+  margin-bottom: 12px;
+  color: var(--color-secondary);
+}
+
+.loading-state p, .empty-state p {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .fate-container { padding: 12px; max-width: 100%; box-sizing: border-box; }
+  
+  .current-status {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .status-time, .status-weather {
+    min-width: auto;
+  }
+  
+  .fate-header-info {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .filter-group {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  
+  .filter-group label {
+    min-width: auto;
+  }
+  
+  .fate-select {
+    width: 100%;
+    min-width: auto;
+  }
+
+  /* 移动端优化：放宽列表高度限制与内边距 */
+  .fate-body { padding: 12px; }
+  .fate-list { max-height: none; overflow-y: visible; }
+  .goal-block { flex-direction: row; }
+  .goal-left { flex-wrap: wrap; }
+  .goal-right { justify-content: flex-end; }
+  .goal-countdown { min-width: 120px; }
+  .fate-title { font-size: 16px; }
+  .fate-title .fate-logo { width: 18px; height: 18px; }
+}
+
+/* 隐藏筛选面板时的样式 */
+.fate-filters.hide {
+  display: none !important;
+}
+
+/* 页脚作者信息 */
+.fate-footer { margin-top: 12px; }
+.fate-footer .footer-body {
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 10px 12px; border: 1px solid var(--color-border-main);
+  background: var(--color-bg-dark); border-radius: 10px;
+}
+.fate-footer .footer-title { font-weight: 700; margin-right: 8px; color: var(--color-text-secondary); }
+.fate-footer .footer-text { color: var(--color-text-main); font-size: 12px; line-height: 1.4; }
+.fate-footer .footer-note { color: var(--color-text-secondary); font-size: 12px; }
