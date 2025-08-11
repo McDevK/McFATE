@@ -42,7 +42,8 @@
 html, body { height: 100%; }
 body {
   margin: 0; padding: 0; font-family: 'Noto Sans SC', sans-serif;
-  background: linear-gradient(135deg, var(--color-bg-main) 0%, var(--color-bg-light) 100%);
+  /* 统一背景色，避免大屏出现渐变分层 */
+  background: var(--color-bg-main);
   color: var(--color-text-main);
   min-height: 100vh; display: flex; flex-direction: column;
 }
@@ -88,7 +89,7 @@ body {
   background: var(--color-secondary);
 }
 
-.fate-body { background: rgba(0,0,0,0.2); border: 1px solid var(--color-border-main); border-radius: 12px; padding: 12px; flex: 1 1 auto; display:flex; flex-direction: column; overflow:hidden; box-sizing: border-box; }
+.fate-body { background: rgba(0,0,0,0.2); border: 1px solid var(--color-border-main); border-radius: 12px; padding: 12px; flex: 1 1 auto; display:flex; flex-direction: column; overflow: visible; box-sizing: border-box; }
 
 /* 筛选面板 */
 .fate-filters {
@@ -200,8 +201,8 @@ body {
   flex-direction: column;
   gap: 8px;
   flex: 1 1 auto;
-  overflow-y: auto;
-  max-height: 600px;
+  overflow: visible;       /* 大屏不内滚，随内容自然展开 */
+  max-height: none;
 }
 
 .fate-item {
@@ -446,6 +447,24 @@ body {
   .goal-countdown { min-width: 120px; }
   .fate-title { font-size: 16px; }
   .fate-title .fate-logo { width: 18px; height: 18px; }
+}
+
+/* 大屏增强布局：提高可视宽度，并将目标块排到标题右侧 */
+@media (min-width: 992px) {
+  .fate-container { max-width: 980px; }
+  .fate-item {
+    display: grid;
+    grid-template-columns: 1fr 420px; /* 左：标题；右：目标+倒计时 */
+    gap: 12px;
+    align-items: stretch;
+  }
+  .fate-header-info { grid-column: 1; align-items: center; }
+  .goal-block { grid-column: 2; }
+}
+
+@media (min-width: 1200px) {
+  .fate-container { max-width: 1120px; }
+  .fate-item { grid-template-columns: 1fr 480px; }
 }
 
 /* 隐藏筛选面板时的样式 */
