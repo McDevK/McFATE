@@ -125,10 +125,12 @@
 
   // 目标说明弹出层
   let currentGoalPopover = null;
+  let currentGoalPopoverAnchor = null;
   function hideGoalPopover() {
     if (currentGoalPopover) {
       currentGoalPopover.remove();
       currentGoalPopover = null;
+      currentGoalPopoverAnchor = null;
       document.removeEventListener('click', onDocClickForPopover, true);
       window.removeEventListener('scroll', hideGoalPopover, true);
       window.removeEventListener('resize', hideGoalPopover, true);
@@ -156,6 +158,7 @@
     pop.style.top = `${top}px`;
     pop.style.left = `${left}px`;
     currentGoalPopover = pop;
+    currentGoalPopoverAnchor = anchorEl;
     // 关闭事件
     setTimeout(() => document.addEventListener('click', onDocClickForPopover, true), 0);
     window.addEventListener('scroll', hideGoalPopover, true);
@@ -205,28 +208,19 @@
 
     // 无筛选事件
 
-    // 仅允许点击右侧倒计时区域切换完成状态（单目标标记/撤销）
-    elements.fateList.addEventListener('click', (ev) => {
-      const right = ev.target.closest('.goal-right');
-      if (!right) return;
-      const block = right.closest('.goal-block');
-      if (!block) return;
-      const goalKey = block.getAttribute('data-goal');
-      if (!goalKey) return;
-      if (state.completedGoals.has(goalKey)) state.completedGoals.delete(goalKey); else state.completedGoals.add(goalKey);
-      persistCompleted();
-      renderFateList();
-    });
+    // 黄底“目标区域”仅用于显示危命目标弹窗，不做标记
+    // 标记已完成的交互统一放在左侧白底“标题栏”
 
-    // 点击标题栏：对该FATE下的所有目标批量切换（便于快速标记/撤销）
+    // 点击左侧白底“标题栏”：对该FATE下的所有目标批量切换
     elements.fateList.addEventListener('click', (ev) => {
       const header = ev.target.closest('.fate-header-info');
       if (!header) return;
+      // 防止在黄色块区域（目标块）触发
+      if (ev.target.closest('.goal-block')) return;
       const item = header.closest('.fate-item');
       if (!item) return;
       const goals = Array.from(item.querySelectorAll('.goal-block'));
       if (goals.length === 0) return;
-      // 若存在任意未完成，则全部设为完成；否则全部撤销
       const anyUnfinished = goals.some(g => !state.completedGoals.has(g.getAttribute('data-goal')));
       goals.forEach(g => {
         const k = g.getAttribute('data-goal');
@@ -894,21 +888,29 @@
     elements.fateList.innerHTML = items.map(i => i.html).join('');
 
     // 绑定“目标”详情弹窗（点击整行“目标”区域，不影响完成标记）
+    const bindShowGoals = (triggerEl) => {
+      // 若当前已打开，且点击同一触发元素，则切换为关闭
+      if (currentGoalPopover && currentGoalPopoverAnchor === triggerEl) {
+        hideGoalPopover();
+        return;
+      }
+      const itemEl = triggerEl.closest('.fate-item');
+      if (!itemEl) return;
+      const nameEl = itemEl.querySelector('.fate-name');
+      const locEl = itemEl.querySelector('.fate-location');
+      const name = nameEl ? nameEl.textContent.trim() : '';
+      const mapText = locEl ? (locEl.textContent || '').split('-')[0].trim() : '';
+      const fate = state.fateData.find(f => f.名称 === name && (f.地图 && mapText && f.地图.indexOf(mapText) !== -1));
+      if (!fate) return;
+      showGoalPopover(triggerEl, fate);
+    };
+
     elements.fateList.querySelectorAll('.goal-line.goal-detail-trigger').forEach(el => {
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const itemEl = el.closest('.fate-item');
-        if (!itemEl) return;
-        // 通过标题获取 fate
-        const nameEl = itemEl.querySelector('.fate-name');
-        const locEl = itemEl.querySelector('.fate-location');
-        const name = nameEl ? nameEl.textContent.trim() : '';
-        // 通过地图与名称匹配 fate 对象
-        const mapText = locEl ? (locEl.textContent || '').split('-')[0].trim() : '';
-        const fate = state.fateData.find(f => f.名称 === name && (f.地图 && mapText && f.地图.indexOf(mapText) !== -1));
-        if (!fate) return;
-        showGoalPopover(el, fate);
-      });
+      el.addEventListener('click', (e) => { e.stopPropagation(); bindShowGoals(el); });
+    });
+    // 保障：点击整个黄色块也只显示弹窗，不触发标记
+    elements.fateList.querySelectorAll('.goal-block').forEach(block => {
+      block.addEventListener('click', (e) => { e.stopPropagation(); bindShowGoals(block); });
     });
   }
 

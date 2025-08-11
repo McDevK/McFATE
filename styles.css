@@ -326,7 +326,9 @@ body {
   border: 2px solid var(--color-border-main);
   border-radius: 10px;
   background: var(--color-bg-light);
+  cursor: pointer;
 }
+.goal-block:hover { filter: brightness(0.99); }
 .goal-left {
   display: grid;
   grid-auto-rows: minmax(18px, auto);
