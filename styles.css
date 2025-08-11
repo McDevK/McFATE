@@ -343,6 +343,17 @@ body {
 .goal-line .goal-label { font-weight: 700; color: var(--color-text-secondary); min-width: 48px; }
 .goal-line .goal-value { color: var(--color-text-main); font-weight: 600; }
 
+/* 目标标签样式 */
+.tag { display:inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; line-height: 1.6; margin-right: 6px; border:1px solid var(--color-border-main, #e3e6eb); background: var(--color-bg-elevated, #f7f9fc); }
+.tag-day   { border-color:#c9a86a; background: #f9f3e4; color:#8b6b3d; }
+.tag-night { border-color:#6c7a89; background: #e9edf2; color:#36424f; }
+.tag-weather { border-color:#9bbbd4; background:#edf6ff; color:#1d4a73; }
+/* 出现时间/时间窗口 标签样式 */
+.tag-time { border-color:#c5b28e; background:#f6efe1; color:#6b4e21; }
+
+/* 标签分隔符：用于“{天气} 的 {时间}”中的“的” */
+.tag-sep { display:inline-block; margin: 0 8px; color: var(--color-text-main); opacity: 0.85; vertical-align: middle; font-weight: 700; }
+
 .goal-right { display:flex; align-items:center; justify-content:center; }
 .goal-countdown {
   flex: 0 0 auto;
@@ -357,6 +368,16 @@ body {
 }
 .goal-countdown.active { background: rgba(46,160,67,0.2); color: #28a745; border:1px solid #28a745; }
 .goal-countdown.pending { background: rgba(217,83,79,0.2); color: #d9534f; border:1px solid #d9534f; }
+
+/* 目标说明弹出层 */
+.goal-popover { position: fixed; z-index: 9999; min-width: 220px; max-width: 320px; background: var(--color-bg-pop, #ffffff); color: var(--color-text-main, #222); border:1px solid var(--color-border-main, #e3e6eb); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.18); padding: 10px 12px; }
+.goal-popover .gp-title { font-weight: 700; margin-bottom: 6px; font-size: 13px; }
+.goal-popover .gp-list { margin:0; padding-left: 16px; font-size: 12px; line-height: 1.5; }
+.goal-popover .gp-list li { margin: 2px 0; }
+
+/* 让“目标”整行作为弹窗触发并有交互反馈 */
+.goal-line.goal-detail-trigger { cursor: pointer; }
+.goal-line.goal-detail-trigger:hover { filter: brightness(0.98); }
 
 /* 倒计时显示 */
 .fate-countdown {

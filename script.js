@@ -107,6 +107,61 @@
     WEATHER_NAMES_EN[WEATHER_NAMES_CN[key]] = key;
   });
 
+  // 规则：天气集合中文合并显示
+  function normalizeWeatherLabel(cn) {
+    const s = String(cn || '').trim();
+    if (!s) return '';
+    // 小雨|雷雨|暴雨 → 雨天
+    if (/(小雨\|雷雨\|暴雨)|(小雨\|暴雨\|雷雨)/.test(s)) return '雨天';
+    // 碧空|晴朗 → 晴天
+    if (/碧空\|晴朗|晴朗\|碧空/.test(s)) return '晴天';
+    return s;
+  }
+
+  // HTML转义（弹窗列表安全输出）
+  function escapeHtml(text) {
+    return String(text).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  }
+
+  // 目标说明弹出层
+  let currentGoalPopover = null;
+  function hideGoalPopover() {
+    if (currentGoalPopover) {
+      currentGoalPopover.remove();
+      currentGoalPopover = null;
+      document.removeEventListener('click', onDocClickForPopover, true);
+      window.removeEventListener('scroll', hideGoalPopover, true);
+      window.removeEventListener('resize', hideGoalPopover, true);
+    }
+  }
+  function onDocClickForPopover(e) {
+    if (!currentGoalPopover) return;
+    if (!currentGoalPopover.contains(e.target)) hideGoalPopover();
+  }
+  function showGoalPopover(anchorEl, fate) {
+    hideGoalPopover();
+    const pop = document.createElement('div');
+    pop.className = 'goal-popover';
+    const goalsText = String(fate.危命目标 || '').trim();
+    const lines = goalsText ? goalsText.split(/\n+/).map(s => s.replace(/^\d+\./, '').trim()).filter(Boolean) : [];
+    const listHtml = lines.length ? lines.map(l => `<li>${escapeHtml(l)}</li>`).join('') : '<li>No target requirements</li>';
+    pop.innerHTML = `<div class="gp-title">${escapeHtml(fate.名称)} · 危命目标</div><ul class="gp-list">${listHtml}</ul>`;
+    document.body.appendChild(pop);
+    // 定位：元素下方
+    const rect = anchorEl.getBoundingClientRect();
+    const top = rect.bottom + 8;
+    let left = rect.left;
+    const maxLeft = window.innerWidth - pop.offsetWidth - 12;
+    if (left > maxLeft) left = Math.max(12, maxLeft);
+    pop.style.top = `${top}px`;
+    pop.style.left = `${left}px`;
+    currentGoalPopover = pop;
+    // 关闭事件
+    setTimeout(() => document.addEventListener('click', onDocClickForPopover, true), 0);
+    window.addEventListener('scroll', hideGoalPopover, true);
+    window.addEventListener('resize', hideGoalPopover, true);
+  }
+
   // 初始化应用
   function init() {
     loadPreferences();
@@ -150,11 +205,13 @@
 
     // 无筛选事件
 
-    // 点击目标块切换完成状态（单目标标记/撤销）
+    // 仅允许点击右侧倒计时区域切换完成状态（单目标标记/撤销）
     elements.fateList.addEventListener('click', (ev) => {
-      const goalEl = ev.target.closest('.goal-block');
-      if (!goalEl) return;
-      const goalKey = goalEl.getAttribute('data-goal');
+      const right = ev.target.closest('.goal-right');
+      if (!right) return;
+      const block = right.closest('.goal-block');
+      if (!block) return;
+      const goalKey = block.getAttribute('data-goal');
       if (!goalKey) return;
       if (state.completedGoals.has(goalKey)) state.completedGoals.delete(goalKey); else state.completedGoals.add(goalKey);
       persistCompleted();
@@ -747,7 +804,11 @@
         );
 
         const leftLines = [];
-        if (appearWeather) leftLines.push(`<div class=\"goal-line\"><span class=\"goal-label\">出现天气</span><span class=\"goal-value\">${appearWeather}</span></div>`);
+        if (appearWeather) {
+          const show = normalizeWeatherLabel(appearWeather);
+          const tag = `<span class="tag tag-weather">${show}</span>`;
+          leftLines.push(`<div class="goal-line"><span class="goal-label">出现天气</span><span class="goal-value">${tag}</span></div>`);
+        }
         if (appearStart || appearEnd) {
           // 展示原始区间（兼容单列写法）
           let aLabel = appearStart, dLabel = appearEnd;
@@ -755,11 +816,23 @@
             const [s1, s2] = splitEtRangeMaybe(String(aLabel)); aLabel = s1; dLabel = s2;
           }
           const timeLabel = `ET ${formatEtTimeHm(aLabel)}` + (dLabel ? ` - ${formatEtTimeHm(dLabel)}` : '');
-          leftLines.push(`<div class=\"goal-line\"><span class=\"goal-label\">出现时间</span><span class=\"goal-value\">${timeLabel}</span></div>`);
+          leftLines.push(`<div class=\"goal-line\"><span class=\"goal-label\">出现时间</span><span class=\"goal-value\"><span class=\"tag tag-time\">${timeLabel}</span></span></div>`);
         }
-        const goalVal = `${g.weatherReq || ''}${g.weatherReq && g.timeReq ? ' & ' : ''}${g.timeReq || ''}`;
+        // 目标标签：天气 与 白天/夜晚；若同时存在，用“{天气}的{时间}”
+        const goalWeather = normalizeWeatherLabel(g.weatherReq || '');
+        const goalTime = String(g.timeReq || '');
+        const timeTag = /白天/.test(goalTime) ? '<span class="tag tag-day">白天</span>' : (/夜晚/.test(goalTime) ? '<span class="tag tag-night">夜晚</span>' : '');
+        let goalVal = '';
+        if (goalWeather && timeTag) {
+          goalVal = `<span class="tag tag-weather">${goalWeather}</span>${timeTag}`;
+        } else {
+          const pieces = [];
+          if (goalWeather) pieces.push(`<span class="tag tag-weather">${goalWeather}</span>`);
+          if (timeTag) pieces.push(timeTag);
+          goalVal = pieces.join('');
+        }
         if (goalVal.trim().length > 0) {
-          leftLines.push(`<div class=\"goal-line\"><span class=\"goal-label\">目标</span><span class=\"goal-value\">${goalVal}</span></div>`);
+          leftLines.push(`<div class="goal-line goal-detail-trigger"><span class="goal-label">目标</span><span class="goal-value">${goalVal}</span></div>`);
         }
 
         const statusClass = isCompleted ? 'completed' : (cd ? (cd.active ? 'active' : 'pending') : 'pending');
@@ -807,7 +880,11 @@
       lastOrderIds = items.map(i => i.id);
     } else {
       // 没有开始/结束变化，保持之前顺序
-      items.sort((a, b) => lastOrderIds.indexOf(a.id) - lastOrderIds.indexOf(b.id));
+      items.sort((a, b) => {
+        // 若用户手动标记完成/撤销但没有活跃状态变化，也需要把完成项放到最后
+        if (!!a.isCompleted !== !!b.isCompleted) return a.isCompleted ? 1 : -1;
+        return lastOrderIds.indexOf(a.id) - lastOrderIds.indexOf(b.id);
+      });
     }
 
     // 更新状态缓存
@@ -815,6 +892,24 @@
     for (const it of items) lastStatusById.set(it.id, it.hasActive);
 
     elements.fateList.innerHTML = items.map(i => i.html).join('');
+
+    // 绑定“目标”详情弹窗（点击整行“目标”区域，不影响完成标记）
+    elements.fateList.querySelectorAll('.goal-line.goal-detail-trigger').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const itemEl = el.closest('.fate-item');
+        if (!itemEl) return;
+        // 通过标题获取 fate
+        const nameEl = itemEl.querySelector('.fate-name');
+        const locEl = itemEl.querySelector('.fate-location');
+        const name = nameEl ? nameEl.textContent.trim() : '';
+        // 通过地图与名称匹配 fate 对象
+        const mapText = locEl ? (locEl.textContent || '').split('-')[0].trim() : '';
+        const fate = state.fateData.find(f => f.名称 === name && (f.地图 && mapText && f.地图.indexOf(mapText) !== -1));
+        if (!fate) return;
+        showGoalPopover(el, fate);
+      });
+    });
   }
 
   // 设置定时更新
