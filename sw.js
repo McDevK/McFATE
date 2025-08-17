@@ -1,5 +1,5 @@
 // McFATE Service Worker
-const CACHE_NAME = 'mcfate-v1.0.3'; // bump 以清理旧缓存
+const CACHE_NAME = 'mcfate-v1.0.4'; // bump 以清理旧缓存
 // 仅缓存纯静态资源，避免缓存 index.html 与 script.js 导致页面回退
 const urlsToCache = [
   './',

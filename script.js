@@ -252,7 +252,6 @@
       resetListOrderCache();
       renderFateList();
       
-      console.log(`✅ FATE数据加载成功，共${state.fateData.length}个FATE`);
     } catch (error) {
       console.error('Error loading FATE data:', error);
       elements.fateList.innerHTML = `
@@ -284,10 +283,19 @@
 
   function formatMsFull(ms) {
     const totalSec = Math.max(0, Math.floor(ms / 1000));
-    const hh = String(Math.floor(totalSec / 3600)).padStart(2, '0');
-    const mm = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
-    const ss = String(totalSec % 60).padStart(2, '0');
-    return `${hh}:${mm}:${ss}`;
+    const days = Math.floor(totalSec / 86400);
+    const hours = Math.floor((totalSec % 86400) / 3600);
+    const minutes = Math.floor((totalSec % 3600) / 60);
+    const seconds = totalSec % 60;
+    
+    if (days > 0) {
+      return `${days}天${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    } else {
+      const hh = String(hours).padStart(2, '0');
+      const mm = String(minutes).padStart(2, '0');
+      const ss = String(seconds).padStart(2, '0');
+      return `${hh}:${mm}:${ss}`;
+    }
   }
 
   function formatMsHHMM(ms) {
@@ -527,8 +535,12 @@
 
   // 出现时间窗口 + 指定出现天气 的综合倒计时（例如：乌合之众）
   function getAppearanceWithWeatherCountdown(mapName, appearStr, disappearStr, appearWeatherStr, extraTimeReq = '', extraWeatherStr = '') {
+
+    
     const zoneKey = MAP_NAMES[mapName];
-    if (!zoneKey) return null;
+    if (!zoneKey) {
+      return null;
+    }
     // 先解析出现时间窗口，避免未初始化变量被引用
     const appear = parseEtTimeStr(appearStr);
     const disappear = parseEtTimeStr(disappearStr);
@@ -541,6 +553,7 @@
       .map(s => WEATHER_NAMES_EN[s.trim()])
       .filter(Boolean);
 
+
     // 允许天气集合：若两者都存在则取交集，否则取存在的一方；都没有则表示不限制
     let allowWeatherSet = null; // null 表示不限制
     if (appearWeatherKeys.length > 0 && extraWeatherKeys.length > 0) {
@@ -550,6 +563,62 @@
       allowWeatherSet = new Set(appearWeatherKeys);
     } else if (extraWeatherKeys.length > 0) {
       allowWeatherSet = new Set(extraWeatherKeys);
+    }
+
+    // 特殊处理：如果只有出现天气条件，没有目标需求，需要计算时间窗口内的天气
+    if (appearWeatherKeys.length > 0 && extraWeatherKeys.length === 0 && !extraTimeReq && appear && disappear) {
+      // 这种情况是"乌合之众"模式：只有出现时间窗口+出现天气，没有目标需求
+      // 需要计算在时间窗口内什么时候会出现指定天气
+      const now = Date.now();
+      
+
+
+      // 查找未来本地时间3天内的所有艾欧泽亚时间窗口
+      const threeDaysMs = 3 * 24 * 60 * 60 * 1000; // 3天的毫秒数
+      const endTime = now + threeDaysMs;
+      
+      // 从当前时间开始，每次增加一个艾欧泽亚天，直到超过3天
+      let currentTime = now;
+      let dayCount = 0;
+      
+      while (currentTime < endTime && dayCount < 100) { // 防止无限循环
+        // 计算当前艾欧泽亚天的ET 8:00开始的天气区间
+        const et8Start = currentTime + msToEtTime(8, 0); // ET 8:00对应的真实时间
+        const et8End = et8Start + EORZEA_8_HOUR_MS; // ET 16:00
+        
+        // 检查ET 8:00-16:00区间的天气
+        const weather = pickWeatherByValue(zoneKey, calculateWeatherValue(et8Start));
+        
+
+        
+        // 如果ET 8:00-16:00区间是阴云天气，那么11:10-12:10就在这个区间内
+        if (allowWeatherSet.has(weather.name)) {
+          // 计算11:10-12:10在真实时间中的位置
+          // 注意：这里应该基于et8Start来计算，而不是currentTime
+          const windowStart = et8Start + (11 * 60 + 10) * EORZEA_MINUTE_MS; // ET 11:10
+          const windowEnd = et8Start + (12 * 60 + 10) * EORZEA_MINUTE_MS;   // ET 12:10
+          
+
+          
+          // 如果当前时间在11:10-12:10区间内
+          if (now >= windowStart && now < windowEnd) {
+            const msLeft = windowEnd - now;
+            return { active: true, msLeft, text: `可完成剩余时间 ${formatMsFull(msLeft)}` };
+          }
+          
+          // 如果当前时间在11:10-12:10区间之前
+          if (now < windowStart) {
+            const msLeft = windowStart - now;
+            return { active: false, msLeft, text: `距离可完成还有 ${formatMsFull(msLeft)}` };
+          }
+        }
+        
+        // 移动到下一个艾欧泽亚天
+        currentTime += EORZEA_DAY_MS;
+        dayCount++;
+      }
+      
+      return { active: false, msLeft: 0, text: '等待中' };
     }
 
     if (!appear && !disappear) {
@@ -568,11 +637,18 @@
 
     if (!allowWeatherSet) {
       // 仅出现时间窗口
-      return getAppearanceWindowCountdown(appearStr, disappearStr);
+      const result = getAppearanceWindowCountdown(appearStr, disappearStr);
+      return result;
     }
 
     // 已确认存在出现窗口
-    if (!appear && !disappear) return null;
+    if (!appear && !disappear) {
+      // 如果没有时间窗口，但有天气要求，使用纯天气倒计时
+      if (appearWeatherKeys.length > 0) {
+        return getWeatherRequirementCountdown(mapName, appearWeatherStr);
+      }
+      return null;
+    }
 
     // 计算未来若干个时间窗口内与天气区间的第一次相交（两者必须同时满足）
     const now = Date.now();
@@ -599,6 +675,7 @@
           const w = pickWeatherByValue(zoneKey, calculateWeatherValue(intStart));
           const intEnd = intStart + EORZEA_8_HOUR_MS;
           const has = allowWeatherSet.has(w.name);
+                    
           if (has) {
             const interStart = Math.max(intStart, winStart);
             const interEnd = Math.min(intEnd, winEnd);
@@ -719,8 +796,87 @@
 
   // 筛选FATE数据
   function filterFateData() {
-    // 直接返回全部FATE
-    return state.fateData || [];
+    if (!state.fateData) return [];
+    
+    return state.fateData.filter(fate => {
+      // 检查搜索关键词
+      if (searchKeyword) {
+        const nameMatch = fate.名称.toLowerCase().includes(searchKeyword);
+        const mapMatch = fate.地图.toLowerCase().includes(searchKeyword);
+        const goalMatch = (fate.目标需求天气 || '').toLowerCase().includes(searchKeyword) ||
+                         (fate.目标需求时间 || '').toLowerCase().includes(searchKeyword) ||
+                         (fate.危命目标 || '').toLowerCase().includes(searchKeyword);
+        
+        if (!nameMatch && !mapMatch && !goalMatch) {
+          return false;
+        }
+      }
+      
+      // 检查地图筛选
+      if (!filterState.maps[fate.地图]) {
+        return false;
+      }
+      
+      // 检查完成状态筛选
+      // 需要检查该FATE的所有目标是否都已完成
+      const goals = [];
+      
+      // 组装目标集合（与renderFateList中的逻辑一致）
+      const appearWeather = fate.出现天气 || '';
+      const appearStart = fate.出现时间 || '';
+      const appearEnd = fate.消失时间 || '';
+
+      // 组合型目标：天气+时间（时间以&开头）
+      if (fate.目标需求天气 && /^\s*&/.test(String(fate.目标需求时间 || ''))) {
+        const pureTime = String(fate.目标需求时间).replace(/^\s*&\s*/, '');
+        goals.push({ weatherReq: String(fate.目标需求天气).trim(), timeReq: pureTime, isCombined: true });
+      }
+
+      // 天气 AND 拆分、天气 OR 保持一项
+      if (fate.目标需求天气 && !/^\s*&/.test(String(fate.目标需求时间 || ''))) {
+        const weatherStr = String(fate.目标需求天气).trim();
+        if (weatherStr.includes('&')) {
+          weatherStr.split('&').map(s => s.trim()).filter(Boolean).forEach(part => {
+            goals.push({ weatherReq: part });
+          });
+        } else {
+          goals.push({ weatherReq: weatherStr });
+        }
+      }
+
+      // 时间（非&）目标
+      if (fate.目标需求时间 && !/^\s*&/.test(String(fate.目标需求时间))) {
+        goals.push({ timeReq: String(fate.目标需求时间).trim() });
+      }
+
+      // 若没有任何目标，则也添加一个普通条目
+      if (goals.length === 0) {
+        goals.push({});
+      }
+      
+      // 检查每个目标的完成状态
+      const allCompleted = goals.every((g, idx) => {
+        const goalKey = `${fate.地图}|${fate.名称}|goal|${idx}|${g.weatherReq || ''}|${g.timeReq || ''}`;
+        return state.completedGoals.has(goalKey);
+      });
+      
+      const hasUncompleted = goals.some((g, idx) => {
+        const goalKey = `${fate.地图}|${fate.名称}|goal|${idx}|${g.weatherReq || ''}|${g.timeReq || ''}`;
+        return !state.completedGoals.has(goalKey);
+      });
+      
+      // 如果只显示已完成，但FATE有未完成的目标，则过滤掉
+      if (filterState.completion['已完成'] && !filterState.completion['未完成'] && hasUncompleted) {
+        return false;
+      }
+      
+      // 如果只显示未完成，但FATE所有目标都已完成，则过滤掉
+      if (filterState.completion['未完成'] && !filterState.completion['已完成'] && allCompleted) {
+        return false;
+      }
+      
+      return true;
+    });
   }
 
   // 渲染FATE列表
@@ -744,6 +900,8 @@
       const appearWeather = fate.出现天气 || '';
       const appearStart = fate.出现时间 || '';
       const appearEnd = fate.消失时间 || '';
+
+
 
       // 组合型目标：天气+时间（时间以&开头）
       if (fate.目标需求天气 && /^\s*&/.test(String(fate.目标需求时间 || ''))) {
@@ -788,14 +946,25 @@
       goals.forEach((g, idx) => {
         const goalKey = `${fate.地图}|${fate.名称}|goal|${idx}|${g.weatherReq || ''}|${g.timeReq || ''}`;
         const isCompleted = state.completedGoals.has(goalKey);
-        const cd = isCompleted ? null : getAppearanceWithWeatherCountdown(
-          fate.地图,
-          appearStart,
-          appearEnd,
-          appearWeather,
-          g.timeReq || '',
-          g.weatherReq || ''
-        );
+        
+        // 只对有意义的配置进行倒计时计算
+        const hasMeaningfulConfig = (appearStart && appearEnd) || g.weatherReq || g.timeReq || appearWeather;
+        let cd = null;
+        
+        if (!isCompleted && hasMeaningfulConfig) {
+
+          
+          cd = getAppearanceWithWeatherCountdown(
+            fate.地图,
+            appearStart,
+            appearEnd,
+            appearWeather,
+            g.timeReq || '',
+            g.weatherReq || ''
+          );
+          
+
+        }
 
         const leftLines = [];
         if (appearWeather) {
@@ -914,16 +1083,263 @@
     });
   }
 
+  // 时钟更新函数
+  function updateClock() {
+    const eorzeaTimeElement = document.getElementById('eorzeaTimeValue');
+    const localTimeElement = document.getElementById('localTimeValue');
+    
+    if (eorzeaTimeElement && localTimeElement) {
+      // 更新本地时间
+      const now = new Date();
+      const localTime = now.toLocaleTimeString('zh-CN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+      localTimeElement.textContent = localTime;
+
+      // 更新艾欧泽亚时间
+      const eorzeaTime = calculateEorzeaTime(now);
+      eorzeaTimeElement.textContent = eorzeaTime;
+    }
+  }
+
+  // 计算艾欧泽亚时间
+  function calculateEorzeaTime(realTime) {
+    // 艾欧泽亚时间流逝速度是现实时间的20倍
+    const eorzeaSeconds = Math.floor(realTime.getTime() / 1000 * 20);
+    const eorzeaHours = Math.floor(eorzeaSeconds / 3600) % 24;
+    const eorzeaMinutes = Math.floor((eorzeaSeconds % 3600) / 60);
+    
+    return `${eorzeaHours.toString().padStart(2, '0')}:${eorzeaMinutes.toString().padStart(2, '0')}`;
+  }
+
   // 设置定时更新
   function setupPeriodicUpdates() {
+    // 每秒更新时钟
+    updateClock();
+    setInterval(updateClock, 1000);
+    
     // 每秒更新当前状态
     setInterval(updateCurrentStatus, 1000);
     
     // 每秒更新FATE列表以刷新倒计时
     setInterval(renderFateList, 1000);
+    
+    // 添加调试信息，确认更新频率
+    console.log('倒计时更新频率设置：所有定时器均为1秒间隔');
   }
 
+  // 筛选功能
+  let filterState = {
+    maps: {
+      '西萨纳兰': true,
+      '中萨纳兰': true,
+      '东萨纳兰': true,
+      '南萨纳兰': true,
+      '北萨纳兰': true,
+      '乌尔达哈': true,
+      '黑衣森林中部林区': true,
+      '黑衣森林东部林区': true,
+      '黑衣森林南部林区': true,
+      '黑衣森林北部林区': true,
+      '格里达尼亚': true,
+      '中拉诺西亚': true,
+      '拉诺西亚低地': true,
+      '东拉诺西亚': true,
+      '西拉诺西亚': true,
+      '拉诺西亚高地': true,
+      '拉诺西亚外地': true,
+      '利姆萨·罗敏萨': true,
+      '库尔札斯中央高地': true,
+      '摩杜纳': true
+    },
+    completion: {
+      '未完成': true,
+      '已完成': true
+    }
+  };
+
+  // 地区分组配置
+  const regionGroups = {
+    '萨纳兰': ['西萨纳兰', '中萨纳兰', '东萨纳兰', '南萨纳兰', '北萨纳兰', '乌尔达哈'],
+    '黑衣森林': ['黑衣森林中部林区', '黑衣森林东部林区', '黑衣森林南部林区', '黑衣森林北部林区', '格里达尼亚'],
+    '拉诺西亚': ['中拉诺西亚', '拉诺西亚低地', '东拉诺西亚', '西拉诺西亚', '拉诺西亚高地', '拉诺西亚外地', '利姆萨·罗敏萨'],
+    '伊修加德': ['库尔札斯中央高地'],
+    '其他': ['摩杜纳']
+  };
+
+  // 搜索关键词
+  let searchKeyword = '';
+
+  // 保存筛选状态到localStorage
+  function saveFilterState() {
+    try {
+      localStorage.setItem('mcfate-filter-state', JSON.stringify(filterState));
+    } catch (e) {
+      console.warn('保存筛选状态失败:', e);
+    }
+  }
+
+  // 从localStorage加载筛选状态
+  function loadFilterState() {
+    try {
+      const saved = localStorage.getItem('mcfate-filter-state');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // 合并保存的状态，确保新添加的地图也有默认值
+        filterState.maps = { ...filterState.maps, ...parsed.maps };
+        filterState.completion = { ...filterState.completion, ...parsed.completion };
+      }
+    } catch (e) {
+      console.warn('加载筛选状态失败:', e);
+    }
+  }
+
+  // 更新筛选按钮的视觉状态
+  function updateFilterChips() {
+    document.querySelectorAll('.chip').forEach(chip => {
+      const key = chip.dataset.key;
+      const value = chip.dataset.value;
+      
+      if (key === 'map') {
+        if (filterState.maps[value]) {
+          chip.classList.add('active');
+        } else {
+          chip.classList.remove('active');
+        }
+      } else if (key === 'completion') {
+        if (filterState.completion[value]) {
+          chip.classList.add('active');
+        } else {
+          chip.classList.remove('active');
+        }
+      }
+    });
+  }
+
+  // 批量选择/取消选择地区
+  function toggleRegionSelection(region) {
+    const maps = regionGroups[region];
+    if (!maps) return;
+    
+    // 检查该地区是否全部选中
+    const allSelected = maps.every(map => filterState.maps[map]);
+    
+    // 如果全部选中，则全部取消；否则全部选中
+    maps.forEach(map => {
+      filterState.maps[map] = !allSelected;
+    });
+    
+    // 更新视觉状态
+    updateFilterChips();
+    // 保存状态
+    saveFilterState();
+    // 重新渲染列表
+    renderFateList();
+  }
+
+  // 初始化筛选功能
+  function initFilter() {
+    const filterBtn = document.getElementById('filterBtn');
+    const filterDropdown = document.getElementById('filterDropdown');
+    const fateSearch = document.getElementById('fateSearch');
+    const clearSearch = document.getElementById('clearSearch');
+
+    // 筛选按钮点击事件
+    if (filterBtn) {
+      filterBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        filterDropdown.classList.toggle('hidden');
+      });
+    }
+
+    // 点击外部关闭筛选框
+    document.addEventListener('click', (e) => {
+      if (!filterDropdown.contains(e.target) && !filterBtn.contains(e.target)) {
+        filterDropdown.classList.add('hidden');
+      }
+    });
+
+    // 搜索功能
+    if (fateSearch) {
+      fateSearch.addEventListener('input', (e) => {
+        searchKeyword = e.target.value.toLowerCase().trim();
+        renderFateList(); // 重新渲染列表以应用搜索
+        
+        // 控制清除按钮的显示
+        if (clearSearch) {
+          clearSearch.style.display = searchKeyword ? 'flex' : 'none';
+        }
+      });
+    }
+    
+    // 清除搜索功能
+    if (clearSearch) {
+      clearSearch.addEventListener('click', () => {
+        if (fateSearch) {
+          fateSearch.value = '';
+          searchKeyword = '';
+          renderFateList(); // 重新渲染列表
+          clearSearch.style.display = 'none';
+          fateSearch.focus(); // 重新聚焦到搜索框
+        }
+      });
+    }
+
+    // 绑定分组折叠事件
+    document.querySelectorAll('.section-toggle').forEach(toggle => {
+      toggle.addEventListener('click', () => {
+        const section = toggle.dataset.section;
+        const content = document.getElementById(`section-${section}`);
+        const icon = toggle.querySelector('i');
+        
+        toggle.classList.toggle('collapsed');
+        content.classList.toggle('collapsed');
+        
+        if (toggle.classList.contains('collapsed')) {
+          icon.style.transform = 'rotate(-90deg)';
+        } else {
+          icon.style.transform = 'rotate(0deg)';
+        }
+      });
+    });
+
+    // 绑定筛选选项点击事件
+    document.querySelectorAll('.chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const key = chip.dataset.key;
+        const value = chip.dataset.value;
+        
+        if (key === 'map') {
+          filterState.maps[value] = !filterState.maps[value];
+        } else if (key === 'completion') {
+          filterState.completion[value] = !filterState.completion[value];
+        }
+        
+        chip.classList.toggle('active');
+        saveFilterState(); // 保存筛选状态
+        renderFateList(); // 重新渲染列表以应用筛选
+      });
+    });
+
+    // 绑定批量选择按钮事件
+    document.querySelectorAll('.section-toggle-all').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const region = btn.dataset.section;
+        toggleRegionSelection(region);
+      });
+    });
+  }
+
+
+
   // 启动应用
-  document.addEventListener('DOMContentLoaded', init);
+  document.addEventListener('DOMContentLoaded', () => {
+    init();
+    loadFilterState(); // 加载筛选状态
+    initFilter();
+    updateFilterChips(); // 更新筛选按钮的视觉状态
+  });
 
 })();
