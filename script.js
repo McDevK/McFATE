@@ -7,6 +7,7 @@
     themeToggle: document.getElementById('themeToggle'),
     listToggle: document.getElementById('listToggle'),
     hideCompletedBtn: document.getElementById('hideCompletedBtn'),
+    settingsToggle: document.getElementById('settingsToggle'),
     eorzeaTime: document.getElementById('eorzeaTime'),
     weatherCountdown: document.getElementById('weatherCountdown'),
     fateList: document.getElementById('fateList'),
@@ -28,9 +29,79 @@
   let lastOrderIds = [];
   const lastStatusById = new Map(); // id -> hasActive
 
+  // 导出数据的键列表
+  const EXPORT_KEYS = [
+    'mcfate-theme',
+    'mcfate-list-view',
+    'mcfate-hide-completed',
+    'mcfate-completed-goals',
+    'mcfate-filter-state'
+  ];
+
   function resetListOrderCache() {
     lastOrderIds = [];
     lastStatusById.clear();
+  }
+
+  // 导出本地数据
+  function exportLocalData() {
+    const data = {};
+    // 导出所有配置数据
+    for (const k of EXPORT_KEYS) {
+      try { 
+        const value = localStorage.getItem(k);
+        if (value !== null) {
+          data[k] = value; 
+        }
+      } catch(e) {
+        console.warn(`导出键 ${k} 失败:`, e);
+      }
+    }
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; 
+    a.download = 'mcfate-backup.json';
+    document.body.appendChild(a); 
+    a.click(); 
+    a.remove();
+    URL.revokeObjectURL(url);
+    
+    console.log('FATE数据已导出');
+  }
+
+  // 导入本地数据
+  function importLocalData(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const obj = JSON.parse(String(reader.result || '{}'));
+        let importedCount = 0;
+        
+        Object.keys(obj).forEach(k => {
+          try { 
+            localStorage.setItem(k, obj[k]); 
+            importedCount++;
+          } catch(e) {
+            console.warn(`导入键 ${k} 失败:`, e);
+          }
+        });
+        
+        // 重新载入状态
+        loadPreferences();
+        loadFilterState();
+        updateFilterChips();
+        renderFateList();
+        
+        console.log(`成功导入 ${importedCount} 个配置项`);
+        alert('数据已导入，页面已刷新');
+      } catch (e) {
+        console.error('导入失败:', e);
+        alert('导入失败：文件格式错误');
+      }
+    };
+    reader.readAsText(file);
   }
 
   // 艾欧泽亚时间常量（与McWeather一致）
@@ -296,6 +367,50 @@
       // 重新渲染列表
       renderFateList();
     });
+
+    // 设置按钮
+    if (elements.settingsToggle) {
+      elements.settingsToggle.addEventListener('click', () => {
+        // 设置菜单：导出 / 导入（垂直排列，纯色底，高层级）
+        const menu = document.createElement('div');
+        menu.style.position = 'fixed';
+        menu.style.top = '72px';
+        menu.style.right = '18px';
+        // 纯色底：使用主题主色，不透明
+        menu.style.background = 'var(--color-primary)';
+        menu.style.opacity = '1';
+        menu.style.backdropFilter = 'none';
+        menu.style.border = '2px solid var(--color-border-main)';
+        menu.style.borderRadius = '12px';
+        menu.style.boxShadow = '0 14px 34px rgba(0,0,0,.28)';
+        menu.style.padding = '12px';
+        menu.style.zIndex = '2147483647';
+        menu.style.minWidth = '180px';
+        menu.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <button id="mcf-export" class="btn btn-primary">导出本地数据</button>
+            <button id="mcf-import" class="btn btn-secondary">导入本地数据</button>
+          </div>
+        `;
+        document.body.appendChild(menu);
+        const close = () => menu.remove();
+        setTimeout(() => document.addEventListener('click', (ev) => {
+          if (!menu.contains(ev.target) && ev.target !== elements.settingsToggle) close();
+        }, { once: true }), 0);
+        menu.querySelector('#mcf-export').onclick = () => { exportLocalData(); close(); };
+        menu.querySelector('#mcf-import').onclick = () => { const f = document.getElementById('importDataInput'); if (f) f.click(); close(); };
+      });
+    }
+
+    // 导入文件输入
+    const importInput = document.getElementById('importDataInput');
+    if (importInput) {
+      importInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) importLocalData(file);
+        importInput.value = '';
+      });
+    }
 
     // 无筛选事件
 

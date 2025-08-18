@@ -13,9 +13,9 @@
   <main class="fate-container" id="fateContainer">
     <header class="fate-header">
       <div class="fate-title">
-        <!-- <a href="../" class="home-link" title="返回主页">
+          <a href="../" class="home-link" title="返回主页">
           <img src="./assets/icons/button/back.png" alt="返回" class="back-icon">
-        </a> -->
+        </a>
         <img src="./assets/icons/button/FATE.png" alt="FATE" class="fate-logo"><span>F.A.T.E.计时器</span>
       </div>
               <div class="fate-actions">
@@ -36,6 +36,10 @@
         <button class="fate-btn fate-theme-toggle" id="themeToggle" title="白天/夜晚" aria-label="白天/夜晚">
           <img src="./assets/icons/button/light.png" alt="白天" class="theme-icon">
         </button>
+        <button class="fate-btn fate-settings-toggle" id="settingsToggle" title="设置" aria-label="设置">
+          <img src="./assets/icons/button/setting.png" alt="设置" class="setting-icon">
+        </button>
+        <input id="importDataInput" type="file" accept="application/json" hidden />
       </div>
     </header>
     <section class="fate-body" id="fateBody">
@@ -203,7 +207,17 @@
       <div class="footer-content">
                       <div class="footer-info">
                 <p>&copy; 2025 McTools | 麦满分🌸黄金谷  麦当劳🌸黄金谷</p>
-                <p>基于 ｜ <span class="authors">苏烟Suyn<br>桑尼米尔克🌸日影地修炼所<br>初舞🌸天幕魔导城<br>静希肥肥十郎🌸天幕魔导城</span> ｜ 统计数据</p>
+                <p class="authors-line">
+                  <span class="based-text">基于 ｜</span>
+                  <span class="authors-list">
+                    <span class="author-item">苏烟Suyn</span>
+                    <span class="author-item">桑尼米尔克🌸日影地修炼所</span>
+                    <span class="author-item">初舞🌸天幕魔导城</span>
+                    <span class="author-item">静希肥肥十郎🌸天幕魔导城</span>
+                  </span>
+                  <span class="stats-text">｜ 统计数据</span>
+                </p>
+                <p>备案号：<a href="https://www.baidu.com" target="_blank">123789126891274987129</a></p>
             </div>
           <div class="footer-links">
               <span></span>

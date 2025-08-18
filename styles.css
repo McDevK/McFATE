@@ -592,7 +592,7 @@ body {
   flex-wrap: wrap;
 }
 
-.status-time, .status-weather {
+.status-time, .status-weather, .status-completion {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1165,6 +1165,35 @@ body {
   vertical-align: middle;
 }
 
+/* 新的作者信息布局 */
+.authors-line {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+.based-text, .stats-text {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.authors-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  line-height: 1.2;
+}
+
+.author-item {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
 .footer-links {
   margin-top: 16px;
   display: flex;
@@ -1177,4 +1206,43 @@ body {
   width: 20px; height: 20px; object-fit: contain; filter: var(--icon-filter, none);
   transform: none; /* 确保图标不被旋转 */
   transition: none; /* 防止图标继承按钮的过渡效果 */
+}
+
+/* 设置按钮图标样式 */
+.fate-btn .setting-icon {
+  width: 20px; height: 20px; object-fit: contain; filter: var(--icon-filter, none);
+  transform: none;
+  transition: none;
+}
+
+/* 设置浮窗按钮样式 */
+.btn { 
+  padding: 6px 12px; 
+  border-radius: 8px; 
+  border: 2px solid var(--color-border-main); 
+  cursor: pointer; 
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-primary { 
+  background: var(--color-secondary); 
+  color: var(--color-text-main); 
+}
+
+.btn-primary:hover {
+  background: var(--color-accent);
+  transform: translateY(-1px);
+}
+
+.btn-secondary { 
+  background: var(--color-bg-light); 
+  color: var(--color-text-main); 
+}
+
+.btn-secondary:hover {
+  background: var(--color-accent);
+  transform: translateY(-1px);
 }
