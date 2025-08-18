@@ -18,12 +18,13 @@
     theme: 'light',
     listView: false, // 列表视图状态
     hideCompleted: false, // 隐藏已完成状态
-    fateData: [],
+    fateData: [], // 倒计时列表使用的特殊FATE数据
+    allFateData: [], // 全部FATE数据，用于列表视图和统计
     // 以  地图|名称|goal|idx|weather|time 为唯一标识，单目标标记
     completedGoals: new Set()
   };
 
-  // 列表顺序缓存：在没有“开始/结束”状态变化前保持相对稳定
+  // 列表顺序缓存：在没有"开始/结束"状态变化前保持相对稳定
   let lastOrderIds = [];
   const lastStatusById = new Map(); // id -> hasActive
 
@@ -173,6 +174,7 @@
   function init() {
     loadPreferences();
     setupEventListeners();
+    // 立即开始加载数据，不等待DOM完全加载
     loadFateData();
     setupPeriodicUpdates();
     updateCurrentStatus();
@@ -208,6 +210,8 @@
 
   function persistCompleted() {
     try { localStorage.setItem('mcfate-completed-goals', JSON.stringify(Array.from(state.completedGoals))); } catch (e) {}
+    // 更新已完成目标统计
+    updateCompletionCount();
   }
 
   // 更新主题按钮图标
@@ -271,10 +275,10 @@
 
     // 无筛选事件
 
-    // 黄底“目标区域”仅用于显示危命目标弹窗，不做标记
-    // 标记已完成的交互统一放在左侧白底“标题栏”
+    // 黄底"目标区域"仅用于显示危命目标弹窗，不做标记
+    // 标记已完成的交互统一放在左侧白底"标题栏"
 
-    // 点击左侧白底“标题栏”：对该FATE下的所有目标批量切换
+    // 点击左侧白底"标题栏"：对该FATE下的所有目标批量切换
     elements.fateList.addEventListener('click', (ev) => {
       const header = ev.target.closest('.fate-header-info');
       if (!header) return;
@@ -298,31 +302,60 @@
   // 加载FATE数据
   async function loadFateData() {
     try {
-      // 添加时间戳参数防止缓存，确保获取最新数据
-      const timestamp = new Date().getTime();
-      const response = await fetch(`./src/fate_data.json?t=${timestamp}`, {
-        cache: 'no-cache', // 强制不使用缓存
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
-      });
+      // 显示加载状态
+      if (elements.fateList) {
+        elements.fateList.innerHTML = `
+          <div class="loading-state">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>正在加载FATE数据...</p>
+          </div>
+        `;
+      }
       
-      if (!response.ok) throw new Error('Failed to load FATE data');
+      // 并行加载两个数据文件以提高速度
+      const [specialResponse, allResponse] = await Promise.all([
+        fetch('./src/fate_data.json', {
+          cache: 'force-cache', // 使用缓存以提高加载速度
+          headers: {
+            'Cache-Control': 'max-age=3600' // 缓存1小时
+          }
+        }),
+        fetch('./src/fate_common_data.json', {
+          cache: 'force-cache',
+          headers: {
+            'Cache-Control': 'max-age=3600'
+          }
+        })
+      ]);
       
-      state.fateData = await response.json();
+      if (!specialResponse.ok) throw new Error('Failed to load special FATE data');
+      if (!allResponse.ok) throw new Error('Failed to load all FATE data');
+      
+      // 并行解析JSON
+      const [fateData, allFateData] = await Promise.all([
+        specialResponse.json(),
+        allResponse.json()
+      ]);
+      
+      state.fateData = fateData;
+      state.allFateData = allFateData;
+      
       populateMapSelect();
       resetListOrderCache();
       renderFateList();
+      // 初始化已完成目标统计
+      updateCompletionCount();
       
     } catch (error) {
       console.error('Error loading FATE data:', error);
-      elements.fateList.innerHTML = `
-        <div class="empty-state">
-          <i class="fas fa-exclamation-triangle"></i>
-          <p>无法加载FATE数据，请检查网络连接后刷新页面</p>
-        </div>
-      `;
+      if (elements.fateList) {
+        elements.fateList.innerHTML = `
+          <div class="empty-state">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>无法加载FATE数据，请检查网络连接后刷新页面</p>
+          </div>
+        `;
+      }
     }
   }
 
@@ -565,7 +598,7 @@
 
   // 出现/消失时间窗口倒计时（只考虑时间窗口）
   function getAppearanceWindowCountdown(appearStr, disappearStr) {
-    // 兼容 “11:10 - 12:10” 一行写法
+    // 兼容 "11:10 - 12:10" 一行写法
     let aStr = appearStr, dStr = disappearStr;
     if (!dStr && aStr && /-|–|—/.test(String(aStr))) {
       const [s1, s2] = splitEtRangeMaybe(String(aStr));
@@ -808,7 +841,7 @@
     if (!zoneKey) return { active: false, msLeft: 0, text: '等待中' };
     const now = Date.now();
     const currentStart = nearestIntervalStart(now);
-    let tCursor = currentStart + EORZEA_8_HOUR_MS; // 从“下一个”8h区间开始搜索，避免出现 00:00:00 的边界卡住
+    let tCursor = currentStart + EORZEA_8_HOUR_MS; // 从"下一个"8h区间开始搜索，避免出现 00:00:00 的边界卡住
     let guard = 0;
     const allowWeathers = weatherReq.split('|').map(wk => WEATHER_NAMES_EN[wk.trim()]).filter(Boolean);
     while (guard < 2000) {
@@ -857,6 +890,33 @@
 
     // 更新天气倒计时
     elements.weatherCountdown.textContent = countdown.text;
+
+    // 更新已完成目标统计
+    updateCompletionCount();
+  }
+
+  // 更新已完成目标统计
+  function updateCompletionCount() {
+    if (!state.allFateData) return;
+    
+    let totalGoals = 0;
+    let completedGoals = 0;
+    
+    // 使用全部FATE数据进行统计，每个FATE有4个目标
+    state.allFateData.forEach(fate => {
+      totalGoals += 4; // 每个FATE固定4个目标
+      
+      // 检查每个目标的完成状态
+      for (let idx = 0; idx < 4; idx++) {
+        const listGoalKey = `${fate.地图}|${fate.名称}|list-goal|${idx}`;
+        if (state.completedGoals.has(listGoalKey)) {
+          completedGoals++;
+        }
+      }
+    });
+    
+    const completionElement = document.getElementById('completionCount');
+    if (completionElement) completionElement.textContent = `${completedGoals}/${totalGoals}`;
   }
 
   // 筛选FATE数据
@@ -998,6 +1058,25 @@
 
   // 渲染FATE列表
   function renderFateList() {
+    // 如果是列表视图，使用全部FATE数据
+    if (state.listView) {
+      if (!state.allFateData || state.allFateData.length === 0) {
+        elements.fateList.innerHTML = `
+          <div class="empty-state">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>无法加载全部FATE数据</p>
+          </div>
+        `;
+        return;
+      }
+      // 列表视图：使用全部FATE数据，renderListView内部会处理筛选和隐藏
+      renderListView(state.allFateData);
+      // 根据是否启用隐藏，决定是否让容器高度收缩
+      document.getElementById('fateContainer').classList.toggle('shrink-list', !!state.hideCompleted);
+      return;
+    }
+
+    // 倒计时列表：使用筛选后的特殊FATE数据
     const filteredFates = filterFateData();
 
     if (filteredFates.length === 0) {
@@ -1010,18 +1089,9 @@
       return;
     }
 
-    // 如果是列表视图，使用简化的渲染逻辑
-    if (state.listView) {
-      // 列表视图：当启用隐藏并且FATE四目标均完成时，renderListView内部已经过滤
-      renderListView(filteredFates);
-      // 根据是否启用隐藏，决定是否让容器高度收缩
-      document.getElementById('fateContainer').classList.toggle('shrink-list', !!state.hideCompleted);
-      return;
-    }
-
     const items = filteredFates.flatMap(fate => {
 
-      // 组装“目标”集合，并在渲染时将“出现条件”并入每个目标的倒计时计算
+      // 组装"目标"集合，并在渲染时将"出现条件"并入每个目标的倒计时计算
       const goals = [];
 
       const appearWeather = fate.出现天气 || '';
@@ -1108,7 +1178,7 @@
           const timeLabel = `ET ${formatEtTimeHm(aLabel)}` + (dLabel ? ` - ${formatEtTimeHm(dLabel)}` : '');
           leftLines.push(`<div class=\"goal-line\"><span class=\"goal-label\">出现时间</span><span class=\"goal-value\"><span class=\"tag tag-time\">${timeLabel}</span></span></div>`);
         }
-        // 目标标签：天气 与 白天/夜晚；若同时存在，用“{天气}的{时间}”
+        // 目标标签：天气 与 白天/夜晚；若同时存在，用"{天气}的{时间}"
         const goalWeather = normalizeWeatherLabel(g.weatherReq || '');
         const goalTime = String(g.timeReq || '');
         const timeTag = /白天/.test(goalTime) ? '<span class="tag tag-day">白天</span>' : (/夜晚/.test(goalTime) ? '<span class="tag tag-night">夜晚</span>' : '');
@@ -1190,7 +1260,7 @@
     // 根据是否启用隐藏，决定是否让容器高度收缩
     document.getElementById('fateContainer').classList.toggle('shrink-list', !!state.hideCompleted);
 
-    // 绑定“目标”详情弹窗（点击整行“目标”区域，不影响完成标记）
+    // 绑定"目标"详情弹窗（点击整行"目标"区域，不影响完成标记）
     const bindShowGoals = (triggerEl) => {
       // 若当前已打开，且点击同一触发元素，则切换为关闭
       if (currentGoalPopover && currentGoalPopoverAnchor === triggerEl) {
@@ -1379,7 +1449,10 @@
     if (filterBtn) {
       filterBtn.addEventListener('click', (e) => {
         e.stopPropagation();
+        const isHidden = filterDropdown.classList.contains('hidden');
         filterDropdown.classList.toggle('hidden');
+        // 更新按钮激活状态
+        filterBtn.classList.toggle('active', !isHidden);
       });
     }
 
@@ -1387,6 +1460,8 @@
     document.addEventListener('click', (e) => {
       if (!filterDropdown.contains(e.target) && !filterBtn.contains(e.target)) {
         filterDropdown.classList.add('hidden');
+        // 移除按钮激活状态
+        filterBtn.classList.remove('active');
       }
     });
 
@@ -1463,8 +1538,39 @@
 
   // 列表视图渲染函数
   function renderListView(fates) {
+    // 先进行筛选
+    let filteredFates = fates.filter(fate => {
+      // 检查搜索关键词
+      if (searchKeyword) {
+        const nameMatch = fate.名称.toLowerCase().includes(searchKeyword);
+        const mapMatch = fate.地图.toLowerCase().includes(searchKeyword);
+        const goalMatch = (fate.危命目标 || '').toLowerCase().includes(searchKeyword);
+        
+        if (!nameMatch && !mapMatch && !goalMatch) {
+          return false;
+        }
+      }
+      
+      // 检查地图筛选
+      if (!filterState.maps[fate.地图]) {
+        return false;
+      }
+      
+      return true;
+    });
+
+    if (filteredFates.length === 0) {
+      elements.fateList.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-search"></i>
+          <p>没有找到符合条件的FATE</p>
+        </div>
+      `;
+      return;
+    }
+
     // 解析危命目标，提取4个目标
-    let fateItems = fates.map(fate => {
+    let fateItems = filteredFates.map(fate => {
       const goalsText = String(fate.危命目标 || '').trim();
       const goals = goalsText ? goalsText.split(/\n+/).map(s => s.replace(/^\d+\./, '').trim()).filter(Boolean) : [];
       
@@ -1475,7 +1581,7 @@
       
       // 检查每个目标的完成状态
       const completedGoals = goals.map((goal, idx) => {
-        const goalKey = `${fate.地图}|${fate.名称}|list-goal|${idx}|${goal}`;
+        const goalKey = `${fate.地图}|${fate.名称}|list-goal|${idx}`;
         return {
           text: goal,
           completed: state.completedGoals.has(goalKey),
@@ -1648,6 +1754,13 @@
     loadFilterState(); // 加载筛选状态
     initFilter();
     updateFilterChips(); // 更新筛选按钮的视觉状态
+    
+    // 确保筛选按钮初始状态正确
+    const filterBtn = document.getElementById('filterBtn');
+    const filterDropdown = document.getElementById('filterDropdown');
+    if (filterBtn && filterDropdown) {
+      filterBtn.classList.toggle('active', !filterDropdown.classList.contains('hidden'));
+    }
   });
 
 })();
