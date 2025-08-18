@@ -13,9 +13,9 @@
   <main class="fate-container" id="fateContainer">
     <header class="fate-header">
       <div class="fate-title">
-          <a href="../" class="home-link" title="返回主页">
+        <!-- <a href="../" class="home-link" title="返回主页">
           <img src="./assets/icons/button/back.png" alt="返回" class="back-icon">
-        </a>
+        </a> -->
         <img src="./assets/icons/button/FATE.png" alt="FATE" class="fate-logo"><span>F.A.T.E.计时器</span>
       </div>
               <div class="fate-actions">
@@ -192,6 +192,29 @@
           </div>
         </div>
       </div>
+      
+      <!-- 快速筛选按钮 - 只在全部FATE列表中显示 -->
+      <div class="quick-filter-buttons list-view-only">
+        <button class="quick-filter-btn" id="timeLimitBtn" title="限时">
+          <span class="btn-text">限时</span>
+        </button>
+        <button class="quick-filter-btn" id="runeBtn" title="符文">
+          <span class="btn-text">符文</span>
+        </button>
+        <button class="quick-filter-btn" id="luckyBtn" title="幸运">
+          <span class="btn-text">幸运</span>
+        </button>
+        <button class="quick-filter-btn" id="highRiskBtn" title="高危">
+          <span class="btn-text">高危</span>
+        </button>
+        <button class="quick-filter-btn" id="weatherBtn" title="天气">
+          <span class="btn-text">天气</span>
+        </button>
+        <button class="quick-filter-btn" id="timeBtn" title="时间">
+          <span class="btn-text">时间</span>
+        </button>
+      </div>
+      
       <div class="fate-list" id="fateList">
         <div class="loading-state">
           <i class="fas fa-spinner fa-spin"></i>
@@ -217,7 +240,6 @@
                   </span>
                   <span class="stats-text">｜ 统计数据</span>
                 </p>
-                <p>备案号：<a href="https://www.baidu.com" target="_blank">123789126891274987129</a></p>
             </div>
           <div class="footer-links">
               <span></span>

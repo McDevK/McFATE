@@ -22,7 +22,16 @@
     fateData: [], // 倒计时列表使用的特殊FATE数据
     allFateData: [], // 全部FATE数据，用于列表视图和统计
     // 以  地图|名称|goal|idx|weather|time 为唯一标识，单目标标记
-    completedGoals: new Set()
+    completedGoals: new Set(),
+    // 快速筛选状态
+    quickFilters: {
+      timeLimit: false,
+      rune: false,
+      lucky: false,
+      highRisk: false,
+      weather: false,
+      time: false
+    }
   };
 
   // 列表顺序缓存：在没有"开始/结束"状态变化前保持相对稳定
@@ -35,12 +44,84 @@
     'mcfate-list-view',
     'mcfate-hide-completed',
     'mcfate-completed-goals',
-    'mcfate-filter-state'
+    'mcfate-filter-state',
+    'mcfate-quick-filters'
   ];
 
   function resetListOrderCache() {
     lastOrderIds = [];
     lastStatusById.clear();
+  }
+
+  // 重置其他快速筛选按钮
+  function resetOtherQuickFilters(activeFilter) {
+    const filterButtons = {
+      timeLimit: document.getElementById('timeLimitBtn'),
+      rune: document.getElementById('runeBtn'),
+      lucky: document.getElementById('luckyBtn'),
+      highRisk: document.getElementById('highRiskBtn'),
+      weather: document.getElementById('weatherBtn'),
+      time: document.getElementById('timeBtn')
+    };
+
+    Object.keys(state.quickFilters).forEach(key => {
+      if (key !== activeFilter) {
+        state.quickFilters[key] = false;
+        if (filterButtons[key]) {
+          filterButtons[key].classList.remove('active');
+        }
+      }
+    });
+  }
+
+  // 快速筛选逻辑
+  function applyQuickFilters(fate) {
+    // 限时筛选：检查目标中是否包含时间关键词
+    if (state.quickFilters.timeLimit) {
+      const timeKeywords = ['10秒', '90秒', '120秒', '180秒', '240秒', '300秒', '600秒'];
+      const goalsText = String(fate.危命目标 || '').toLowerCase();
+      const hasTimeLimit = timeKeywords.some(keyword => goalsText.includes(keyword.toLowerCase()));
+      if (!hasTimeLimit) return false;
+    }
+
+    // 其他筛选条件（待实现）
+    if (state.quickFilters.rune) {
+      // 符文筛选：检查目标中是否包含"符文"关键词
+      const goalsText = String(fate.危命目标 || '').toLowerCase();
+      const hasRune = goalsText.includes('符文');
+      if (!hasRune) return false;
+    }
+
+    if (state.quickFilters.lucky) {
+      // 幸运筛选：检查目标中是否包含"幸运"关键词
+      const goalsText = String(fate.危命目标 || '').toLowerCase();
+      const hasLucky = goalsText.includes('幸运');
+      if (!hasLucky) return false;
+    }
+
+    if (state.quickFilters.highRisk) {
+      // 高危筛选：检查目标中是否包含"高危"关键词
+      const goalsText = String(fate.危命目标 || '').toLowerCase();
+      const hasHighRisk = goalsText.includes('高危');
+      if (!hasHighRisk) return false;
+    }
+
+    if (state.quickFilters.weather) {
+      // 天气筛选：检查目标中是否包含天气相关关键词
+      const weatherKeywords = ['天气', '雨天', '晴天'];
+      const goalsText = String(fate.危命目标 || '').toLowerCase();
+      const hasWeatherKeyword = weatherKeywords.some(keyword => goalsText.includes(keyword.toLowerCase()));
+      if (!hasWeatherKeyword) return false;
+    }
+
+    if (state.quickFilters.time) {
+      // 时间筛选：检查是否包含"白天"或"夜晚"关键词
+      const goalsText = String(fate.危命目标 || '').toLowerCase();
+      const hasTimeKeyword = goalsText.includes('白天') || goalsText.includes('夜晚');
+      if (!hasTimeKeyword) return false;
+    }
+
+    return true; // 没有筛选条件时返回true
   }
 
   // 导出本地数据
@@ -257,6 +338,18 @@
     state.listView = localStorage.getItem('mcfate-list-view') === 'true';
     state.hideCompleted = localStorage.getItem('mcfate-hide-completed') === 'true';
     
+    // 加载快速筛选状态
+    try {
+      const savedFilters = JSON.parse(localStorage.getItem('mcfate-quick-filters') || '{}');
+      Object.keys(state.quickFilters).forEach(key => {
+        if (savedFilters.hasOwnProperty(key)) {
+          state.quickFilters[key] = savedFilters[key];
+        }
+      });
+    } catch (e) {
+      console.warn('加载快速筛选状态失败:', e);
+    }
+    
     // 读取已完成目标记录
     try {
       const saved = JSON.parse(localStorage.getItem('mcfate-completed-goals') || '[]');
@@ -290,6 +383,37 @@
     elements.hideCompletedBtn.classList.toggle('active', state.hideCompleted);
     updateHideButtonIcon();
 
+    // 应用快速筛选按钮状态
+    const timeLimitBtn = document.getElementById('timeLimitBtn');
+    if (timeLimitBtn) {
+      timeLimitBtn.classList.toggle('active', state.quickFilters.timeLimit);
+    }
+    
+    const runeBtn = document.getElementById('runeBtn');
+    if (runeBtn) {
+      runeBtn.classList.toggle('active', state.quickFilters.rune);
+    }
+    
+    const luckyBtn = document.getElementById('luckyBtn');
+    if (luckyBtn) {
+      luckyBtn.classList.toggle('active', state.quickFilters.lucky);
+    }
+    
+    const highRiskBtn = document.getElementById('highRiskBtn');
+    if (highRiskBtn) {
+      highRiskBtn.classList.toggle('active', state.quickFilters.highRisk);
+    }
+
+    const timeBtn = document.getElementById('timeBtn');
+    if (timeBtn) {
+      timeBtn.classList.toggle('active', state.quickFilters.time);
+    }
+    
+    const weatherBtn = document.getElementById('weatherBtn');
+    if (weatherBtn) {
+      weatherBtn.classList.toggle('active', state.quickFilters.weather);
+    }
+
     // 应用筛选面板状态
     // 无筛选界面
   }
@@ -307,6 +431,15 @@
     }
     // 更新已完成目标统计
     updateCompletionCount();
+  }
+
+  // 保存快速筛选状态
+  function persistQuickFilters() {
+    try {
+      localStorage.setItem('mcfate-quick-filters', JSON.stringify(state.quickFilters));
+    } catch (e) {
+      console.warn('保存快速筛选状态失败:', e);
+    }
   }
 
   // 更新主题按钮图标
@@ -327,13 +460,13 @@
   function updateHideButtonIcon() {
     const icon = elements.hideCompletedBtn.querySelector('.hide-icon');
     if (state.hideCompleted) {
-      icon.src = './assets/icons/button/present.png';
-      icon.alt = '显示已完成';
-      elements.hideCompletedBtn.title = '显示已完成';
-    } else {
       icon.src = './assets/icons/button/hide.png';
       icon.alt = '隐藏已完成';
       elements.hideCompletedBtn.title = '隐藏已完成';
+    } else {
+      icon.src = './assets/icons/button/present.png';
+      icon.alt = '显示已完成';
+      elements.hideCompletedBtn.title = '显示已完成';
     }
   }
 
@@ -409,6 +542,79 @@
         const file = e.target.files && e.target.files[0];
         if (file) importLocalData(file);
         importInput.value = '';
+      });
+    }
+
+    // 快速筛选按钮事件监听器
+    const timeLimitBtn = document.getElementById('timeLimitBtn');
+    if (timeLimitBtn) {
+      timeLimitBtn.addEventListener('click', () => {
+        state.quickFilters.timeLimit = !state.quickFilters.timeLimit;
+        timeLimitBtn.classList.toggle('active', state.quickFilters.timeLimit);
+        // 重置其他筛选按钮
+        resetOtherQuickFilters('timeLimit');
+        persistQuickFilters();
+        renderFateList();
+      });
+    }
+
+    const runeBtn = document.getElementById('runeBtn');
+    if (runeBtn) {
+      runeBtn.addEventListener('click', () => {
+        state.quickFilters.rune = !state.quickFilters.rune;
+        runeBtn.classList.toggle('active', state.quickFilters.rune);
+        // 重置其他筛选按钮
+        resetOtherQuickFilters('rune');
+        persistQuickFilters();
+        renderFateList();
+      });
+    }
+
+    const luckyBtn = document.getElementById('luckyBtn');
+    if (luckyBtn) {
+      luckyBtn.addEventListener('click', () => {
+        state.quickFilters.lucky = !state.quickFilters.lucky;
+        luckyBtn.classList.toggle('active', state.quickFilters.lucky);
+        // 重置其他筛选按钮
+        resetOtherQuickFilters('lucky');
+        persistQuickFilters();
+        renderFateList();
+      });
+    }
+
+    const highRiskBtn = document.getElementById('highRiskBtn');
+    if (highRiskBtn) {
+      highRiskBtn.addEventListener('click', () => {
+        state.quickFilters.highRisk = !state.quickFilters.highRisk;
+        highRiskBtn.classList.toggle('active', state.quickFilters.highRisk);
+        // 重置其他筛选按钮
+        resetOtherQuickFilters('highRisk');
+        persistQuickFilters();
+        renderFateList();
+      });
+    }
+
+    const timeBtn = document.getElementById('timeBtn');
+    if (timeBtn) {
+      timeBtn.addEventListener('click', () => {
+        state.quickFilters.time = !state.quickFilters.time;
+        timeBtn.classList.toggle('active', state.quickFilters.time);
+        // 重置其他筛选按钮
+        resetOtherQuickFilters('time');
+        persistQuickFilters();
+        renderFateList();
+      });
+    }
+
+    const weatherBtn = document.getElementById('weatherBtn');
+    if (weatherBtn) {
+      weatherBtn.addEventListener('click', () => {
+        state.quickFilters.weather = !state.quickFilters.weather;
+        weatherBtn.classList.toggle('active', state.quickFilters.weather);
+        // 重置其他筛选按钮
+        resetOtherQuickFilters('weather');
+        persistQuickFilters();
+        renderFateList();
       });
     }
 
@@ -1695,6 +1901,11 @@
         return false;
       }
       
+      // 检查快速筛选
+      if (!applyQuickFilters(fate)) {
+        return false;
+      }
+      
       return true;
     });
 
@@ -1719,7 +1930,7 @@
       }
       
       // 检查每个目标的完成状态
-      const completedGoals = goals.map((goal, idx) => {
+      let completedGoals = goals.map((goal, idx) => {
         const goalKey = `${fate.地图}|${fate.名称}|list-goal|${idx}`;
         return {
           text: goal,
@@ -1728,6 +1939,56 @@
           originalIndex: idx
         };
       });
+      
+      // 如果启用了限时筛选，只显示包含时间关键词的目标
+      if (state.quickFilters.timeLimit) {
+        const timeKeywords = ['10秒', '90秒', '120秒', '180秒', '240秒', '300秒', '600秒'];
+        completedGoals = completedGoals.filter(goal => {
+          const goalText = goal.text.toLowerCase();
+          return timeKeywords.some(keyword => goalText.includes(keyword.toLowerCase()));
+        });
+      }
+      
+      // 如果启用了符文筛选，只显示包含"符文"关键词的目标
+      if (state.quickFilters.rune) {
+        completedGoals = completedGoals.filter(goal => {
+          const goalText = goal.text.toLowerCase();
+          return goalText.includes('符文');
+        });
+      }
+      
+      // 如果启用了幸运筛选，只显示包含"幸运"关键词的目标
+      if (state.quickFilters.lucky) {
+        completedGoals = completedGoals.filter(goal => {
+          const goalText = goal.text.toLowerCase();
+          return goalText.includes('幸运');
+        });
+      }
+      
+      // 如果启用了高危筛选，只显示包含"高危"关键词的目标
+      if (state.quickFilters.highRisk) {
+        completedGoals = completedGoals.filter(goal => {
+          const goalText = goal.text.toLowerCase();
+          return goalText.includes('高危');
+        });
+      }
+      
+      // 如果启用了时间筛选，只显示包含"白天/夜晚"关键词的目标
+      if (state.quickFilters.time) {
+        completedGoals = completedGoals.filter(goal => {
+          const goalText = goal.text.toLowerCase();
+          return goalText.includes('白天') || goalText.includes('夜晚');
+        });
+      }
+      
+      // 如果启用了天气筛选，只显示包含天气相关关键词的目标
+      if (state.quickFilters.weather) {
+        const weatherKeywords = ['天气', '雨天', '晴天'];
+        completedGoals = completedGoals.filter(goal => {
+          const goalText = goal.text.toLowerCase();
+          return weatherKeywords.some(keyword => goalText.includes(keyword.toLowerCase()));
+        });
+      }
       
       // 检查是否所有目标都已完成
       const allCompleted = completedGoals.every(g => g.completed);
@@ -1749,6 +2010,23 @@
         
         // 过滤掉已完成的目标
         item.goals = item.goals.filter(goal => !goal.completed);
+        
+        return true;
+      });
+    }
+    
+    // 应用已完成/未完成筛选（仅在全部FATE列表中生效）
+    if (state.listView) {
+      fateItems = fateItems.filter(item => {
+        // 如果只显示已完成，但FATE有未完成的目标，则过滤掉
+        if (filterState.completion['已完成'] && !filterState.completion['未完成'] && !item.allCompleted) {
+          return false;
+        }
+        
+        // 如果只显示未完成，但FATE所有目标都已完成，则过滤掉
+        if (filterState.completion['未完成'] && !filterState.completion['已完成'] && item.allCompleted) {
+          return false;
+        }
         
         return true;
       });

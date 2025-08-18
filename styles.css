@@ -1246,3 +1246,77 @@ body {
   background: var(--color-accent);
   transform: translateY(-1px);
 }
+
+/* 快速筛选按钮容器 */
+.quick-filter-buttons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap;
+  justify-content: stretch;
+  margin-bottom: 16px;
+  padding: 8px 0;
+  width: 100%;
+}
+
+/* 默认隐藏快速筛选按钮（倒计时列表模式） */
+.quick-filter-buttons.list-view-only {
+  display: none;
+}
+
+/* 在全部FATE列表模式下显示快速筛选按钮 */
+.fate-container.list-view .quick-filter-buttons.list-view-only {
+  display: flex;
+}
+
+/* 快速筛选按钮样式 */
+.quick-filter-btn {
+  padding: 8px 12px;
+  border: 2px solid var(--color-border-main);
+  border-radius: 8px;
+  background: var(--color-bg-light);
+  color: var(--color-text-main);
+  cursor: pointer;
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.quick-filter-btn:hover {
+  background: var(--color-accent);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border-color: var(--color-secondary);
+}
+
+.quick-filter-btn.active {
+  background: var(--color-secondary);
+  color: var(--color-text-main);
+  border-color: var(--color-secondary);
+  box-shadow: 0 0 0 2px rgba(201,168,106,0.35) inset;
+}
+
+.quick-filter-btn .btn-text {
+  display: block;
+  text-align: center;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .quick-filter-buttons {
+    gap: 4px;
+    padding: 6px 0;
+    flex-wrap: nowrap;
+    justify-content: stretch;
+  }
+  
+  .quick-filter-btn {
+    padding: 4px 6px;
+    font-size: 11px;
+    flex: 1;
+    min-width: 0;
+  }
+}
