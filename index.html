@@ -13,10 +13,10 @@
   <main class="fate-container" id="fateContainer">
     <header class="fate-header">
       <div class="fate-title">
-        <!-- <a href="../index.html" class="home-link" title="返回主页">
-          <i class="fas fa-arrow-left"></i>
-        </a> -->
-        <img src="./assets/icons/button/FATE.png" alt="FATE" class="fate-logo"><span>McFATE - F.A.T.E.计时器</span>
+          <a href="../" class="home-link" title="返回主页">
+          <img src="./assets/icons/button/back.png" alt="返回" class="back-icon">
+        </a>
+        <img src="./assets/icons/button/FATE.png" alt="FATE" class="fate-logo"><span>F.A.T.E.计时器</span>
       </div>
               <div class="fate-actions">
           <!-- 时间显示 -->
@@ -30,8 +30,11 @@
               <span class="time-value" id="localTimeValue">00:00</span>
             </div>
           </div>
+        <button class="fate-btn fate-list-toggle" id="listToggle" title="列表视图" aria-label="列表视图">
+          <img src="./assets/icons/button/list.png" alt="列表" class="list-icon">
+        </button>
         <button class="fate-btn fate-theme-toggle" id="themeToggle" title="白天/夜晚" aria-label="白天/夜晚">
-          <i class="fas fa-sun"></i>
+          <img src="./assets/icons/button/light.png" alt="白天" class="theme-icon">
         </button>
       </div>
     </header>
@@ -61,6 +64,9 @@
             <i class="fas fa-times"></i>
           </button>
         </div>
+        <button class="hide-btn" id="hideCompletedBtn" title="隐藏已完成" aria-label="隐藏已完成">
+          <img src="./assets/icons/button/hide.png" alt="隐藏" class="hide-icon">
+        </button>
         <div class="filter-container">
           <button class="filter-btn" id="filterBtn" title="筛选">
             <img src="./assets/icons/button/filter.webp" alt="筛选" onerror="this.style.display='none'" />
@@ -185,18 +191,24 @@
         </div>
       </div>
     </section>
-    <footer class="fate-footer" id="fateFooter">
-      <div class="footer-body">
-        <div class="footer-left">
-          <span class="footer-title">数据来源<br></span>
-          <span class="footer-text">苏烟Suyn <br> 桑尼米尔克🌸日影地修炼所 <br> 初舞🌸天幕魔导城 <br> 静希肥肥十郎🌸天幕魔导城</span>
-        </div>
-        <div class="footer-right">
-          <span class="footer-note">数据仅保存在本地浏览器</span>
-        </div>
-      </div>
-    </footer>
   </main>
+
+  <!-- 版权信息 -->
+  <footer class="footer">
+      <div class="footer-divider"></div>
+      <div class="footer-content">
+                      <div class="footer-info">
+                <p>&copy; 2025 McTools | 麦满分🌸黄金谷  麦当劳🌸黄金谷</p>
+                <p>基于 ｜ <span class="authors">苏烟Suyn<br>桑尼米尔克🌸日影地修炼所<br>初舞🌸天幕魔导城<br>静希肥肥十郎🌸天幕魔导城</span> ｜ 统计数据</p>
+                <p>备案号：<a href="https://www.baidu.com" target="_blank">123789126891274987129</a><br></p>
+            </div>
+          <div class="footer-links">
+              <span></span>
+              <span></span>
+              <span></span>
+          </div>
+      </div>
+  </footer>
   <script src="script.js"></script>
   <script>
     // Service Worker 注册

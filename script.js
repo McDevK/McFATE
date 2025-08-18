@@ -5,6 +5,8 @@
   // DOM元素
   const elements = {
     themeToggle: document.getElementById('themeToggle'),
+    listToggle: document.getElementById('listToggle'),
+    hideCompletedBtn: document.getElementById('hideCompletedBtn'),
     eorzeaTime: document.getElementById('eorzeaTime'),
     weatherCountdown: document.getElementById('weatherCountdown'),
     fateList: document.getElementById('fateList'),
@@ -14,6 +16,8 @@
   // 应用状态
   let state = {
     theme: 'light',
+    listView: false, // 列表视图状态
+    hideCompleted: false, // 隐藏已完成状态
     fateData: [],
     // 以  地图|名称|goal|idx|weather|time 为唯一标识，单目标标记
     completedGoals: new Set()
@@ -177,6 +181,9 @@
   // 加载用户偏好设置
   function loadPreferences() {
     state.theme = localStorage.getItem('mcfate-theme') || 'light';
+    state.listView = localStorage.getItem('mcfate-list-view') === 'true';
+    state.hideCompleted = localStorage.getItem('mcfate-hide-completed') === 'true';
+    
     // 读取已完成目标记录
     try {
       const saved = JSON.parse(localStorage.getItem('mcfate-completed-goals') || '[]');
@@ -185,7 +192,15 @@
 
     // 应用主题
     document.body.setAttribute('data-theme', state.theme);
-    elements.themeToggle.querySelector('i').className = state.theme === 'light' ? 'fas fa-sun' : 'fas fa-moon';
+    updateThemeButtonIcon();
+    
+    // 应用列表视图状态
+    elements.listToggle.classList.toggle('active', state.listView);
+    document.getElementById('fateContainer').classList.toggle('list-view', state.listView);
+    
+    // 应用隐藏已完成状态
+    elements.hideCompletedBtn.classList.toggle('active', state.hideCompleted);
+    updateHideButtonIcon();
 
     // 应用筛选面板状态
     // 无筛选界面
@@ -195,6 +210,34 @@
     try { localStorage.setItem('mcfate-completed-goals', JSON.stringify(Array.from(state.completedGoals))); } catch (e) {}
   }
 
+  // 更新主题按钮图标
+  function updateThemeButtonIcon() {
+    const icon = elements.themeToggle.querySelector('.theme-icon');
+    if (state.theme === 'light') {
+      icon.src = './assets/icons/button/light.png';
+      icon.alt = '白天';
+      elements.themeToggle.title = '切换到夜晚模式';
+    } else {
+      icon.src = './assets/icons/button/dark.png';
+      icon.alt = '夜晚';
+      elements.themeToggle.title = '切换到白天模式';
+    }
+  }
+
+  // 更新隐藏按钮图标
+  function updateHideButtonIcon() {
+    const icon = elements.hideCompletedBtn.querySelector('.hide-icon');
+    if (state.hideCompleted) {
+      icon.src = './assets/icons/button/present.png';
+      icon.alt = '显示已完成';
+      elements.hideCompletedBtn.title = '显示已完成';
+    } else {
+      icon.src = './assets/icons/button/hide.png';
+      icon.alt = '隐藏已完成';
+      elements.hideCompletedBtn.title = '隐藏已完成';
+    }
+  }
+
   // 设置事件监听器
   function setupEventListeners() {
 
@@ -202,8 +245,28 @@
     elements.themeToggle.addEventListener('click', () => {
       state.theme = state.theme === 'light' ? 'dark' : 'light';
       document.body.setAttribute('data-theme', state.theme);
-      elements.themeToggle.querySelector('i').className = state.theme === 'light' ? 'fas fa-sun' : 'fas fa-moon';
+      updateThemeButtonIcon();
       localStorage.setItem('mcfate-theme', state.theme);
+    });
+
+    // 列表视图切换
+    elements.listToggle.addEventListener('click', () => {
+      state.listView = !state.listView;
+      elements.listToggle.classList.toggle('active', state.listView);
+      document.getElementById('fateContainer').classList.toggle('list-view', state.listView);
+      localStorage.setItem('mcfate-list-view', state.listView);
+      // 重新渲染列表
+      renderFateList();
+    });
+
+    // 隐藏已完成切换
+    elements.hideCompletedBtn.addEventListener('click', () => {
+      state.hideCompleted = !state.hideCompleted;
+      elements.hideCompletedBtn.classList.toggle('active', state.hideCompleted);
+      localStorage.setItem('mcfate-hide-completed', state.hideCompleted);
+      updateHideButtonIcon();
+      // 重新渲染列表
+      renderFateList();
     });
 
     // 无筛选事件
@@ -263,6 +326,8 @@
     }
   }
 
+
+
   // 填充地图选择器
   function populateMapSelect() {
     // 无地图选择器
@@ -282,7 +347,7 @@
   }
 
   function formatMsFull(ms) {
-    const totalSec = Math.max(0, Math.floor(ms / 1000));
+    const totalSec = Math.max(0, Math.ceil(ms / 1000));
     const days = Math.floor(totalSec / 86400);
     const hours = Math.floor((totalSec % 86400) / 3600);
     const minutes = Math.floor((totalSec % 3600) / 60);
@@ -798,7 +863,7 @@
   function filterFateData() {
     if (!state.fateData) return [];
     
-    return state.fateData.filter(fate => {
+    let filteredFates = state.fateData.filter(fate => {
       // 检查搜索关键词
       if (searchKeyword) {
         const nameMatch = fate.名称.toLowerCase().includes(searchKeyword);
@@ -854,6 +919,8 @@
         goals.push({});
       }
       
+
+      
       // 检查每个目标的完成状态
       const allCompleted = goals.every((g, idx) => {
         const goalKey = `${fate.地图}|${fate.名称}|goal|${idx}|${g.weatherReq || ''}|${g.timeReq || ''}`;
@@ -877,6 +944,56 @@
       
       return true;
     });
+
+    // 如果启用了隐藏已完成，则过滤掉已完成的FATE
+    if (state.hideCompleted && !state.listView) {
+      filteredFates = filteredFates.filter(fate => {
+        // 组装目标集合
+        const goals = [];
+        const appearWeather = fate.出现天气 || '';
+        const appearStart = fate.出现时间 || '';
+        const appearEnd = fate.消失时间 || '';
+
+        // 组合型目标：天气+时间（时间以&开头）
+        if (fate.目标需求天气 && /^\s*&/.test(String(fate.目标需求时间 || ''))) {
+          const pureTime = String(fate.目标需求时间).replace(/^\s*&\s*/, '');
+          goals.push({ weatherReq: String(fate.目标需求天气).trim(), timeReq: pureTime, isCombined: true });
+        }
+
+        // 天气 AND 拆分、天气 OR 保持一项
+        if (fate.目标需求天气 && !/^\s*&/.test(String(fate.目标需求时间 || ''))) {
+          const weatherStr = String(fate.目标需求天气).trim();
+          if (weatherStr.includes('&')) {
+            weatherStr.split('&').map(s => s.trim()).filter(Boolean).forEach(part => {
+              goals.push({ weatherReq: part });
+            });
+          } else {
+            goals.push({ weatherReq: weatherStr });
+          }
+        }
+
+        // 时间（非&）目标
+        if (fate.目标需求时间 && !/^\s*&/.test(String(fate.目标需求时间))) {
+          goals.push({ timeReq: String(fate.目标需求时间).trim() });
+        }
+
+        // 若没有任何目标，则也添加一个普通条目
+        if (goals.length === 0) {
+          goals.push({});
+        }
+
+        // 检查是否所有目标都已完成
+        const allCompleted = goals.every((g, idx) => {
+          const goalKey = `${fate.地图}|${fate.名称}|goal|${idx}|${g.weatherReq || ''}|${g.timeReq || ''}`;
+          return state.completedGoals.has(goalKey);
+        });
+
+        // 返回未完成的FATE
+        return !allCompleted;
+      });
+    }
+
+    return filteredFates;
   }
 
   // 渲染FATE列表
@@ -893,7 +1010,17 @@
       return;
     }
 
+    // 如果是列表视图，使用简化的渲染逻辑
+    if (state.listView) {
+      // 列表视图：当启用隐藏并且FATE四目标均完成时，renderListView内部已经过滤
+      renderListView(filteredFates);
+      // 根据是否启用隐藏，决定是否让容器高度收缩
+      document.getElementById('fateContainer').classList.toggle('shrink-list', !!state.hideCompleted);
+      return;
+    }
+
     const items = filteredFates.flatMap(fate => {
+
       // 组装“目标”集合，并在渲染时将“出现条件”并入每个目标的倒计时计算
       const goals = [];
 
@@ -997,6 +1124,8 @@
         if (goalVal.trim().length > 0) {
           leftLines.push(`<div class="goal-line goal-detail-trigger"><span class="goal-label">目标</span><span class="goal-value">${goalVal}</span></div>`);
         }
+        
+
 
         const statusClass = isCompleted ? 'completed' : (cd ? (cd.active ? 'active' : 'pending') : 'pending');
         const text = isCompleted ? '已完成' : (cd ? cd.text : '—');
@@ -1054,7 +1183,12 @@
     lastStatusById.clear();
     for (const it of items) lastStatusById.set(it.id, it.hasActive);
 
-    elements.fateList.innerHTML = items.map(i => i.html).join('');
+    // 倒计时列表：若启用隐藏，直接从DOM中移除已完成的条目
+    const visibleHtml = state.hideCompleted ? items.filter(i => !i.isCompleted).map(i => i.html).join('') : items.map(i => i.html).join('');
+    elements.fateList.innerHTML = visibleHtml;
+
+    // 根据是否启用隐藏，决定是否让容器高度收缩
+    document.getElementById('fateContainer').classList.toggle('shrink-list', !!state.hideCompleted);
 
     // 绑定“目标”详情弹窗（点击整行“目标”区域，不影响完成标记）
     const bindShowGoals = (triggerEl) => {
@@ -1106,12 +1240,9 @@
 
   // 计算艾欧泽亚时间
   function calculateEorzeaTime(realTime) {
-    // 艾欧泽亚时间流逝速度是现实时间的20倍
-    const eorzeaSeconds = Math.floor(realTime.getTime() / 1000 * 20);
-    const eorzeaHours = Math.floor(eorzeaSeconds / 3600) % 24;
-    const eorzeaMinutes = Math.floor((eorzeaSeconds % 3600) / 60);
-    
-    return `${eorzeaHours.toString().padStart(2, '0')}:${eorzeaMinutes.toString().padStart(2, '0')}`;
+    // 使用与主内容区域相同的艾欧泽亚时间计算方法
+    const eorzeaTime = getEorzeaTime(realTime.getTime());
+    return formatEorzeaTime(eorzeaTime.bell, eorzeaTime.minute);
   }
 
   // 设置定时更新
@@ -1126,8 +1257,6 @@
     // 每秒更新FATE列表以刷新倒计时
     setInterval(renderFateList, 1000);
     
-    // 添加调试信息，确认更新频率
-    console.log('倒计时更新频率设置：所有定时器均为1秒间隔');
   }
 
   // 筛选功能
@@ -1332,7 +1461,186 @@
     });
   }
 
+  // 列表视图渲染函数
+  function renderListView(fates) {
+    // 解析危命目标，提取4个目标
+    let fateItems = fates.map(fate => {
+      const goalsText = String(fate.危命目标 || '').trim();
+      const goals = goalsText ? goalsText.split(/\n+/).map(s => s.replace(/^\d+\./, '').trim()).filter(Boolean) : [];
+      
+      // 确保有4个目标，不足的用空字符串填充
+      while (goals.length < 4) {
+        goals.push('');
+      }
+      
+      // 检查每个目标的完成状态
+      const completedGoals = goals.map((goal, idx) => {
+        const goalKey = `${fate.地图}|${fate.名称}|list-goal|${idx}|${goal}`;
+        return {
+          text: goal,
+          completed: state.completedGoals.has(goalKey),
+          key: goalKey,
+          originalIndex: idx
+        };
+      });
+      
+      // 检查是否所有目标都已完成
+      const allCompleted = completedGoals.every(g => g.completed);
+      
+      return {
+        fate,
+        goals: completedGoals,
+        allCompleted
+      };
+    });
 
+    // 如果启用了隐藏已完成，则过滤掉已完成的FATE和已完成的目标
+    if (state.hideCompleted) {
+      fateItems = fateItems.filter(item => {
+        // 如果所有目标都已完成，隐藏整个FATE
+        if (item.allCompleted) {
+          return false;
+        }
+        
+        // 过滤掉已完成的目标
+        item.goals = item.goals.filter(goal => !goal.completed);
+        
+        return true;
+      });
+    }
+    
+    // 排序：按地图、等级从低到高，已完成的放最后
+    fateItems.sort((a, b) => {
+      // 首先按完成状态排序（未完成的在前）
+      if (a.allCompleted !== b.allCompleted) {
+        return a.allCompleted ? 1 : -1;
+      }
+      
+      // 然后按地图名称排序
+      const mapCompare = a.fate.地图.localeCompare(b.fate.地图);
+      if (mapCompare !== 0) return mapCompare;
+      
+      // 最后按等级从低到高排序
+      return (a.fate.等级 || 0) - (b.fate.等级 || 0);
+    });
+    
+    // 生成HTML
+    const html = fateItems.map(item => {
+      const fate = item.fate;
+      const goals = item.goals;
+      
+      const fateClass = item.allCompleted ? 'fate-item-list completed' : 'fate-item-list';
+      
+      const goalsHtml = goals.map((goal, idx) => {
+        const goalClass = goal.completed ? 'goal-item completed' : 'goal-item';
+        const goalText = goal.completed ? `<span class="goal-text-strikethrough">${goal.text}</span>` : goal.text;
+        
+        return `
+          <div class="${goalClass}" data-goal-key="${goal.key}">
+            <span class="goal-number">${goal.originalIndex + 1}.</span>
+            <span class="goal-text">${goalText}</span>
+          </div>
+        `;
+      }).join('');
+      
+      return `
+        <div class="${fateClass}">
+          <div class="fate-header-list" data-fate-key="${fate.地图}|${fate.名称}">
+            <div class="fate-name-list">${fate.名称}</div>
+            <div class="fate-location-list">
+              <i class="fas fa-map-marker-alt"></i>
+              ${fate.地图} - 等级 ${fate.等级}
+            </div>
+          </div>
+          <div class="goals-container">
+            ${goalsHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    elements.fateList.innerHTML = html;
+    
+    // 绑定事件
+    bindListViewEvents();
+  }
+
+  // 绑定列表视图事件
+  function bindListViewEvents() {
+    // 点击FATE名称，标记所有目标为已完成
+    document.querySelectorAll('.fate-header-list').forEach(header => {
+      header.addEventListener('click', () => {
+        const fateKey = header.dataset.fateKey;
+        const fateItem = header.closest('.fate-item-list');
+        const goals = fateItem.querySelectorAll('.goal-item');
+        
+        // 检查是否所有目标都已完成
+        const allCompleted = Array.from(goals).every(goal => goal.classList.contains('completed'));
+        
+        // 切换所有目标的完成状态
+        goals.forEach(goal => {
+          const goalKey = goal.dataset.goalKey;
+          if (allCompleted) {
+            state.completedGoals.delete(goalKey);
+            goal.classList.remove('completed');
+            goal.querySelector('.goal-text').innerHTML = goal.querySelector('.goal-text').textContent;
+          } else {
+            state.completedGoals.add(goalKey);
+            goal.classList.add('completed');
+            const goalText = goal.querySelector('.goal-text');
+            goalText.innerHTML = `<span class="goal-text-strikethrough">${goalText.textContent}</span>`;
+          }
+        });
+        
+        // 更新FATE项的完成状态
+        if (allCompleted) {
+          fateItem.classList.remove('completed');
+        } else {
+          fateItem.classList.add('completed');
+        }
+        
+        // 保存状态并重新排序
+        persistCompleted();
+        renderFateList();
+      });
+    });
+    
+    // 点击单个目标，切换完成状态
+    document.querySelectorAll('.goal-item').forEach(goal => {
+      goal.addEventListener('click', (e) => {
+        e.stopPropagation(); // 防止触发FATE名称的点击事件
+        
+        const goalKey = goal.dataset.goalKey;
+        const isCompleted = goal.classList.contains('completed');
+        
+        if (isCompleted) {
+          state.completedGoals.delete(goalKey);
+          goal.classList.remove('completed');
+          goal.querySelector('.goal-text').innerHTML = goal.querySelector('.goal-text').textContent;
+        } else {
+          state.completedGoals.add(goalKey);
+          goal.classList.add('completed');
+          const goalText = goal.querySelector('.goal-text');
+          goalText.innerHTML = `<span class="goal-text-strikethrough">${goalText.textContent}</span>`;
+        }
+        
+        // 检查FATE是否所有目标都已完成
+        const fateItem = goal.closest('.fate-item-list');
+        const allGoals = fateItem.querySelectorAll('.goal-item');
+        const allCompleted = Array.from(allGoals).every(g => g.classList.contains('completed'));
+        
+        if (allCompleted) {
+          fateItem.classList.add('completed');
+        } else {
+          fateItem.classList.remove('completed');
+        }
+        
+        // 保存状态并重新排序
+        persistCompleted();
+        renderFateList();
+      });
+    });
+  }
 
   // 启动应用
   document.addEventListener('DOMContentLoaded', () => {
