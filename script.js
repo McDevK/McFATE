@@ -189,8 +189,23 @@
     // 读取已完成目标记录
     try {
       const saved = JSON.parse(localStorage.getItem('mcfate-completed-goals') || '[]');
-      if (Array.isArray(saved)) state.completedGoals = new Set(saved);
-    } catch (e) { state.completedGoals = new Set(); }
+      if (Array.isArray(saved)) {
+        // 验证数据格式，确保所有项目都是字符串
+        const validItems = saved.filter(item => typeof item === 'string');
+        state.completedGoals = new Set(validItems);
+        
+        // 如果数据被过滤了，保存清理后的数据
+        if (validItems.length !== saved.length) {
+          console.log(`清理了 ${saved.length - validItems.length} 个无效的已完成目标记录`);
+          localStorage.setItem('mcfate-completed-goals', JSON.stringify(validItems));
+        }
+      } else {
+        state.completedGoals = new Set();
+      }
+    } catch (e) { 
+      console.warn('加载已完成目标记录失败:', e);
+      state.completedGoals = new Set(); 
+    }
 
     // 应用主题
     document.body.setAttribute('data-theme', state.theme);
@@ -209,7 +224,16 @@
   }
 
   function persistCompleted() {
-    try { localStorage.setItem('mcfate-completed-goals', JSON.stringify(Array.from(state.completedGoals))); } catch (e) {}
+    try { 
+      // 保存所有类型的已完成目标（倒计时列表和全部FATE列表）
+      const completedArray = Array.from(state.completedGoals);
+      localStorage.setItem('mcfate-completed-goals', JSON.stringify(completedArray)); 
+      
+      // 记录保存的数据数量（用于调试）
+      console.log(`已保存 ${completedArray.length} 个已完成目标记录`);
+    } catch (e) {
+      console.warn('保存已完成目标失败:', e);
+    }
     // 更新已完成目标统计
     updateCompletionCount();
   }
