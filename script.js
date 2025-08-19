@@ -802,7 +802,7 @@
   }
 
   // 计算天气目标的倒计时（可完成剩余时间 / 距离可完成还有）
-  function getWeatherRequirementCountdown(mapName, requirement) {
+  function getWeatherRequirementCountdown(mapName, requirement, isAppearance = false) {
     const zoneKey = MAP_NAMES[mapName];
     if (!zoneKey || !requirement) return { active: false, msLeft: 0, text: '未知' };
 
@@ -828,12 +828,14 @@
           const w = pickWeatherByValue(zoneKey, calculateWeatherValue(t));
           if (allowWeathers.includes(w.name)) {
             const ms = Math.max(0, t - now);
-            return { active: false, msLeft: ms, text: `距离可完成还有 ${formatMsFull(ms)}` };
+            const text = isAppearance ? `距离出现还有 ${formatMsFull(ms)}` : `距离可完成还有 ${formatMsFull(ms)}`;
+            return { active: false, msLeft: ms, text };
           }
           t += EORZEA_8_HOUR_MS; guard++;
         }
       }
-      return { active: true, msLeft, text: `可完成剩余时间 ${formatMsFull(msLeft)}` };
+      const text = isAppearance ? `可完成剩余时间 ${formatMsFull(msLeft)}` : `可完成剩余时间 ${formatMsFull(msLeft)}`;
+      return { active: true, msLeft, text };
     }
 
     // 查找下一个满足的天气区间
@@ -843,7 +845,8 @@
       const w = pickWeatherByValue(zoneKey, calculateWeatherValue(t));
       if (allowWeathers.includes(w.name)) {
         const msLeft = Math.max(0, t - now);
-        return { active: false, msLeft, text: `距离可完成还有 ${formatMsFull(msLeft)}` };
+        const text = isAppearance ? `距离出现还有 ${formatMsFull(msLeft)}` : `距离可完成还有 ${formatMsFull(msLeft)}`;
+        return { active: false, msLeft, text };
       }
       t += EORZEA_8_HOUR_MS;
       guard++;
@@ -863,7 +866,7 @@
   }
 
   // 计算时间目标的倒计时（白天/夜晚）
-  function getTimeRequirementCountdown(requirement) {
+  function getTimeRequirementCountdown(requirement, isAppearance = false) {
     if (!requirement) return { active: false, msLeft: 0, text: '未知' };
     const now = Date.now();
     const bell = Math.floor(now / EORZEA_HOUR_MS) % 24;
@@ -874,11 +877,13 @@
     if (requirement.includes('白天')) {
       if (inDay) {
         const msLeft = (1080 - curMin) * EORZEA_MINUTE_MS;
-        return { active: true, msLeft, text: `可完成剩余时间 ${formatMsFull(msLeft)}` };
+        const text = isAppearance ? `可完成剩余时间 ${formatMsFull(msLeft)}` : `可完成剩余时间 ${formatMsFull(msLeft)}`;
+        return { active: true, msLeft, text };
       }
       // 距离下一个白天6:00
       const msLeft = msToEtTime(6, 0);
-      return { active: false, msLeft, text: `距离可完成还有 ${formatMsFull(msLeft)}` };
+      const text = isAppearance ? `距离出现还有 ${formatMsFull(msLeft)}` : `距离可完成还有 ${formatMsFull(msLeft)}`;
+      return { active: false, msLeft, text };
     }
 
     if (requirement.includes('夜晚')) {
@@ -887,11 +892,13 @@
         // 到下一个6:00结束
         const endMin = curMin < 360 ? 360 : 1440; // 当前是00:00-06:00 -> 6:00， 否则到24:00
         const msLeft = (endMin - curMin) * EORZEA_MINUTE_MS;
-        return { active: true, msLeft, text: `可完成剩余时间 ${formatMsFull(msLeft)}` };
+        const text = isAppearance ? `可完成剩余时间 ${formatMsFull(msLeft)}` : `可完成剩余时间 ${formatMsFull(msLeft)}`;
+        return { active: true, msLeft, text };
       }
       // 距离18:00
       const msLeft = msToEtTime(18, 0);
-      return { active: false, msLeft, text: `距离可完成还有 ${formatMsFull(msLeft)}` };
+      const text = isAppearance ? `距离出现还有 ${formatMsFull(msLeft)}` : `距离可完成还有 ${formatMsFull(msLeft)}`;
+      return { active: false, msLeft, text };
     }
 
     return { active: false, msLeft: 0, text: '未知' };
@@ -973,7 +980,7 @@
     }
     // 距离下一个开始
     const nextStartMs = msToEtTime(appear ? appear.h : 0, appear ? appear.m : 0);
-    return { active: false, msLeft: nextStartMs, text: `距离可完成还有 ${formatMsFull(nextStartMs)}` };
+    return { active: false, msLeft: nextStartMs, text: `距离出现还有 ${formatMsFull(nextStartMs)}` };
   }
 
   // 出现时间窗口 + 指定出现天气 的综合倒计时（例如：乌合之众）
@@ -1052,7 +1059,7 @@
           // 如果当前时间在11:10-12:10区间之前
           if (now < windowStart) {
             const msLeft = windowStart - now;
-            return { active: false, msLeft, text: `距离可完成还有 ${formatMsFull(msLeft)}` };
+            return { active: false, msLeft, text: `距离出现还有 ${formatMsFull(msLeft)}` };
           }
         }
         
@@ -1065,110 +1072,39 @@
     }
 
     if (!appear && !disappear) {
-      // 没有出现时间窗口：只根据天气/时间目标联合判断
-      const hasTime = extraTimeReq && (extraTimeReq.includes('白天') || extraTimeReq.includes('夜晚'));
+      // 没有出现时间窗口：只计算天气或时间目标的倒计时
       const weatherStr = (extraWeatherStr || appearWeatherStr || '').trim();
-      const hasWeather = !!weatherStr;
-      if (hasWeather && hasTime) {
-        // 复用组合倒计时
-        return getCombinedWeatherTimeCountdown(mapName, weatherStr, `&${extraTimeReq}`);
-      }
-      if (hasWeather) return getWeatherRequirementCountdown(mapName, weatherStr);
-      if (hasTime) return getTimeRequirementCountdown(extraTimeReq);
-      return { active: false, msLeft: 0, text: '等待中' };
-    }
-
-    if (!allowWeatherSet) {
-      // 仅出现时间窗口
-      const result = getAppearanceWindowCountdown(appearStr, disappearStr);
-      return result;
-    }
-
-    // 已确认存在出现窗口
-    if (!appear && !disappear) {
-      // 如果没有时间窗口，但有天气要求，使用纯天气倒计时
-      if (appearWeatherKeys.length > 0) {
-        return getWeatherRequirementCountdown(mapName, appearWeatherStr);
-      }
-      return null;
-    }
-
-    // 计算未来若干个时间窗口内与天气区间的第一次相交（两者必须同时满足）
-    const now = Date.now();
-    const startMin = (appear ? appear.h * 60 + appear.m : 0) % 1440;
-    const endMinRaw = disappear ? disappear.h * 60 + disappear.m : 1440;
-    const endMin = endMinRaw <= startMin ? endMinRaw + 1440 : endMinRaw; // 跨日处理
-
-    // 辅助：给定一个真实时间，找到与窗口的下一次相交区间（若存在）
-    function findIntersectionFrom(t0) {
-      // 迭代未来N天的窗口
-      for (let day = 0; day < 5; day++) {
-        const dayOffsetMs = day * EORZEA_DAY_MS;
-        // 窗口开始(相对现在)与结束的真实时间
-        const msToStart = msToEtTime((startMin / 60) | 0, startMin % 60) + dayOffsetMs;
-        const winStart = now + Math.max(0, msToStart);
-        let winEnd = winStart + (endMin - startMin) * EORZEA_MINUTE_MS;
-        if (winEnd - winStart > EORZEA_DAY_MS) winEnd = winStart + EORZEA_DAY_MS; // 安全限制
-
-        // 从 max(t0, winStart) 开始，搜索天气区间
-        let cursor = Math.max(t0, winStart);
-        let guard = 0;
-        while (cursor < winEnd && guard < 64) {
-          const intStart = nearestIntervalStart(cursor);
-          const w = pickWeatherByValue(zoneKey, calculateWeatherValue(intStart));
-          const intEnd = intStart + EORZEA_8_HOUR_MS;
-          const has = allowWeatherSet.has(w.name);
-                    
-          if (has) {
-            const interStart = Math.max(intStart, winStart);
-            const interEnd = Math.min(intEnd, winEnd);
-            if (interStart < interEnd) {
-              // 额外时间条件（白天/夜晚）
-              const needDay = extraTimeReq.includes('白天');
-              const needNight = extraTimeReq.includes('夜晚');
-              const isOkTime = (t) => {
-                if (!needDay && !needNight) return true;
-                const bell = Math.floor(t / EORZEA_HOUR_MS) % 24;
-                const inDay = bell >= 6 && bell < 18;
-                return needDay ? inDay : !inDay;
-              };
-
-              // 如果当前时间落在交集区间内
-              if (now >= interStart && now < interEnd && isOkTime(now)) {
-                const msLeft = interEnd - now;
-                return { active: true, msLeft, text: `可完成剩余时间 ${formatMsFull(msLeft)}` };
-              }
-
-              // 计算从现在起到该交集区间开始的等待时间
-              const waitToInterStart = Math.max(0, interStart - now);
-              if (now < interStart) {
-                // 如果需要白天/夜晚，则对齐到交集区间内第一个满足的ET边界
-                if (needDay || needNight) {
-                  // 以交集起点为基准，若其不满足时间条件，则推到下一次6:00或18:00
-                  const tmpNow = interStart;
-                  const bell = Math.floor(tmpNow / EORZEA_HOUR_MS) % 24;
-                  const inDay = bell >= 6 && bell < 18;
-                  const ok = needDay ? inDay : !inDay;
-                  if (!ok) {
-                    const bump = needDay ? msToEtTime(6, 0) : msToEtTime(18, 0);
-                    const candidate = interStart + bump;
-                    if (candidate < interEnd) {
-                      return { active: false, msLeft: candidate - now, text: `距离可完成还有 ${formatMsFull(candidate - now)}` };
-                    }
-                  }
-                }
-                return { active: false, msLeft: waitToInterStart, text: `距离可完成还有 ${formatMsFull(waitToInterStart)}` };
-              }
-            }
-          }
-          cursor = intEnd + 1;
-          guard++;
+      if (weatherStr) {
+        // 如果有出现天气要求，使用出现倒计时格式
+        if (appearWeatherStr) {
+          return getWeatherRequirementCountdown(mapName, weatherStr, true);
         }
+        // 否则使用目标倒计时格式
+        return getWeatherRequirementCountdown(mapName, weatherStr);
+      }
+      if (extraTimeReq) {
+        // 如果有出现时间要求，使用出现倒计时格式
+        if (appearStr || disappearStr) {
+          return getTimeRequirementCountdown(extraTimeReq, true);
+        }
+        // 否则使用目标倒计时格式
+        return getTimeRequirementCountdown(extraTimeReq);
       }
       return { active: false, msLeft: 0, text: '等待中' };
     }
 
-    return findIntersectionFrom(now);
+    // 简化逻辑：有出现天气或出现时间的FATE只计算出现倒计时
+    if (appearWeatherKeys.length > 0) {
+      // 有出现天气要求，计算天气倒计时
+      return getWeatherRequirementCountdown(mapName, appearWeatherStr, true);
+    }
+    
+    if (appear && disappear) {
+      // 有出现时间窗口，计算时间窗口倒计时
+      return getAppearanceWindowCountdown(appearStr, disappearStr);
+    }
+    
+    return { active: false, msLeft: 0, text: '等待中' };
   }
 
   // 天气+时间双目标（时间字段以&开头）
