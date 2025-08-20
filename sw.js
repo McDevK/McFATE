@@ -1,10 +1,5 @@
 // McFATE Service Worker
-<<<<<<< HEAD
 const CACHE_NAME = 'mcfate-v2.0.5.5';
-=======
-const CACHE_NAME = 'mcfate-v2.0.5.2'; // 固定版本号，仅手动更新
-// 仅缓存纯静态资源，避免缓存 index.html 与 script.js 导致页面回退
->>>>>>> parent of a5b4af9 (Fix sw bug)
 const urlsToCache = [
   './', './styles.css', './assets/icons/favicon/favicon.png',
   './assets/icons/button/switch.png',
@@ -48,13 +43,8 @@ self.addEventListener('fetch', event => {
   const req = event.request;
   const url = new URL(req.url);
 
-<<<<<<< HEAD
   // FATE数据文件网络优先
   if (url.pathname.includes('fate_data.json') || url.pathname.includes('fate_common_data.json')) {
-=======
-  // 1) fate_data.json 一律网络优先
-  if (url.pathname.includes('fate_data.json')) {
->>>>>>> parent of a5b4af9 (Fix sw bug)
     event.respondWith(networkFirst(req));
     return;
   }
