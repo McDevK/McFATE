@@ -2223,6 +2223,12 @@
       avatarImage.src = savedAvatar;
       avatarImage.style.display = 'block';
       document.querySelector('.avatar-placeholder').style.display = 'none';
+
+      // 应用保存的变换
+      const savedScale = localStorage.getItem('mcfate-avatar-scale') || 1;
+      const savedX = localStorage.getItem('mcfate-avatar-x') || 0;
+      const savedY = localStorage.getItem('mcfate-avatar-y') || 0;
+      avatarImage.style.transform = `scale(${savedScale}) translate(${savedX}px, ${savedY}px)`;
     }
 
     // 头像容器点击事件
