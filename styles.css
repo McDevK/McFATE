@@ -592,12 +592,28 @@ body {
   flex-wrap: wrap;
 }
 
-.status-time, .status-weather, .status-completion {
+.status-time, .status-weather, .status-completion, .status-filter-completion, .status-completion-btn, .status-filter-completion-btn {
   display: flex;
   align-items: center;
   gap: 6px;
   flex: 1;
   min-width: 200px;
+}
+
+/* 统计按钮样式 */
+.status-completion-btn, .status-filter-completion-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 4px;
+  padding: 4px 6px;
+}
+
+.status-completion-btn:hover, .status-filter-completion-btn:hover {
+  background: var(--color-bg-light);
+  transform: translateY(-1px);
 }
 
 .status-label {

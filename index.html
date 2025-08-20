@@ -57,10 +57,14 @@
           <span class="status-label">当前天气变化：</span>
           <span class="status-value" id="weatherCountdown">计算中...</span>
         </div>
-        <div class="status-completion">
-          <span class="status-label">已完成目标：</span>
+        <button class="status-completion-btn" id="completionToggleBtn" title="点击切换统计方式">
+          <span class="status-label" id="completionLabel">已完成目标：</span>
           <span class="status-value" id="completionCount">0/0</span>
-        </div>
+        </button>
+        <button class="status-filter-completion-btn" id="filterCompletionToggleBtn" title="点击切换统计方式">
+          <span class="status-label" id="filterCompletionLabel">筛选区域完成度：</span>
+          <span class="status-value" id="filterCompletionCount">0/0</span>
+        </button>
       </div>
 
       <!-- FATE列表 -->

@@ -31,7 +31,10 @@
       highRisk: false,
       weather: false,
       time: false
-    }
+    },
+    // 统计显示模式：true为目标模式，false为FATE模式
+    completionDisplayMode: true, // 全局统计显示模式
+    filterCompletionDisplayMode: true // 筛选区域统计显示模式
   };
 
   // 列表顺序缓存：在没有"开始/结束"状态变化前保持相对稳定
@@ -350,6 +353,17 @@
       console.warn('加载快速筛选状态失败:', e);
     }
     
+    // 加载统计显示模式
+    const savedCompletionMode = localStorage.getItem('mcfate-completion-display-mode');
+    if (savedCompletionMode !== null) {
+      state.completionDisplayMode = savedCompletionMode === 'true';
+    }
+    
+    const savedFilterCompletionMode = localStorage.getItem('mcfate-filter-completion-display-mode');
+    if (savedFilterCompletionMode !== null) {
+      state.filterCompletionDisplayMode = savedFilterCompletionMode === 'true';
+    }
+    
     // 读取已完成目标记录
     try {
       const saved = JSON.parse(localStorage.getItem('mcfate-completed-goals') || '[]');
@@ -554,6 +568,7 @@
         // 重置其他筛选按钮
         resetOtherQuickFilters('timeLimit');
         persistQuickFilters();
+        updateFilterCompletionCount();
         renderFateList();
       });
     }
@@ -566,6 +581,7 @@
         // 重置其他筛选按钮
         resetOtherQuickFilters('rune');
         persistQuickFilters();
+        updateFilterCompletionCount();
         renderFateList();
       });
     }
@@ -578,6 +594,7 @@
         // 重置其他筛选按钮
         resetOtherQuickFilters('lucky');
         persistQuickFilters();
+        updateFilterCompletionCount();
         renderFateList();
       });
     }
@@ -590,6 +607,7 @@
         // 重置其他筛选按钮
         resetOtherQuickFilters('highRisk');
         persistQuickFilters();
+        updateFilterCompletionCount();
         renderFateList();
       });
     }
@@ -602,6 +620,7 @@
         // 重置其他筛选按钮
         resetOtherQuickFilters('time');
         persistQuickFilters();
+        updateFilterCompletionCount();
         renderFateList();
       });
     }
@@ -614,7 +633,27 @@
         // 重置其他筛选按钮
         resetOtherQuickFilters('weather');
         persistQuickFilters();
+        updateFilterCompletionCount();
         renderFateList();
+      });
+    }
+
+    // 统计显示模式切换按钮
+    const completionToggleBtn = document.getElementById('completionToggleBtn');
+    if (completionToggleBtn) {
+      completionToggleBtn.addEventListener('click', () => {
+        state.completionDisplayMode = !state.completionDisplayMode;
+        localStorage.setItem('mcfate-completion-display-mode', state.completionDisplayMode);
+        updateCompletionCount();
+      });
+    }
+
+    const filterCompletionToggleBtn = document.getElementById('filterCompletionToggleBtn');
+    if (filterCompletionToggleBtn) {
+      filterCompletionToggleBtn.addEventListener('click', () => {
+        state.filterCompletionDisplayMode = !state.filterCompletionDisplayMode;
+        localStorage.setItem('mcfate-filter-completion-display-mode', state.filterCompletionDisplayMode);
+        updateFilterCompletionCount();
       });
     }
 
@@ -690,6 +729,8 @@
       renderFateList();
       // 初始化已完成目标统计
       updateCompletionCount();
+      // 初始化筛选区域完成度统计
+      updateFilterCompletionCount();
       
     } catch (error) {
       console.error('Error loading FATE data:', error);
@@ -1180,24 +1221,116 @@
   function updateCompletionCount() {
     if (!state.allFateData) return;
     
-    let totalGoals = 0;
-    let completedGoals = 0;
-    
-    // 使用全部FATE数据进行统计，每个FATE有4个目标
-    state.allFateData.forEach(fate => {
-      totalGoals += 4; // 每个FATE固定4个目标
-      
-      // 检查每个目标的完成状态
-      for (let idx = 0; idx < 4; idx++) {
-        const listGoalKey = `${fate.地图}|${fate.名称}|list-goal|${idx}`;
-        if (state.completedGoals.has(listGoalKey)) {
-          completedGoals++;
-        }
-      }
-    });
-    
+    const completionLabelElement = document.getElementById('completionLabel');
     const completionElement = document.getElementById('completionCount');
-    if (completionElement) completionElement.textContent = `${completedGoals}/${totalGoals}`;
+    
+    if (state.completionDisplayMode) {
+      // 目标模式
+      let totalGoals = 0;
+      let completedGoals = 0;
+      
+      // 使用全部FATE数据进行统计，每个FATE有4个目标
+      state.allFateData.forEach(fate => {
+        totalGoals += 4; // 每个FATE固定4个目标
+        
+        // 检查每个目标的完成状态
+        for (let idx = 0; idx < 4; idx++) {
+          const listGoalKey = `${fate.地图}|${fate.名称}|list-goal|${idx}`;
+          if (state.completedGoals.has(listGoalKey)) {
+            completedGoals++;
+          }
+        }
+      });
+      
+      if (completionLabelElement) completionLabelElement.textContent = '已完成目标：';
+      if (completionElement) completionElement.textContent = `${completedGoals}/${totalGoals}`;
+    } else {
+      // FATE模式
+      let totalFates = state.allFateData.length;
+      let completedFates = 0;
+      
+      // 统计已完成的FATE数量（4个目标都完成的FATE）
+      state.allFateData.forEach(fate => {
+        let allGoalsCompleted = true;
+        for (let idx = 0; idx < 4; idx++) {
+          const listGoalKey = `${fate.地图}|${fate.名称}|list-goal|${idx}`;
+          if (!state.completedGoals.has(listGoalKey)) {
+            allGoalsCompleted = false;
+            break;
+          }
+        }
+        if (allGoalsCompleted) {
+          completedFates++;
+        }
+      });
+      
+      if (completionLabelElement) completionLabelElement.textContent = '已完成FATE：';
+      if (completionElement) completionElement.textContent = `${completedFates}/${totalFates}`;
+    }
+    
+    // 更新筛选区域完成度统计
+    updateFilterCompletionCount();
+  }
+
+  // 更新筛选区域完成度统计
+  function updateFilterCompletionCount() {
+    if (!state.allFateData) return;
+    
+    const filterCompletionLabelElement = document.getElementById('filterCompletionLabel');
+    const filterCompletionElement = document.getElementById('filterCompletionCount');
+    
+    if (state.filterCompletionDisplayMode) {
+      // 目标模式
+      let totalFilterGoals = 0;
+      let completedFilterGoals = 0;
+      
+      // 只统计当前筛选地图的FATE
+      state.allFateData.forEach(fate => {
+        // 检查地图是否在筛选范围内
+        if (filterState.maps[fate.地图]) {
+          totalFilterGoals += 4; // 每个FATE固定4个目标
+          
+          // 检查每个目标的完成状态
+          for (let idx = 0; idx < 4; idx++) {
+            const listGoalKey = `${fate.地图}|${fate.名称}|list-goal|${idx}`;
+            if (state.completedGoals.has(listGoalKey)) {
+              completedFilterGoals++;
+            }
+          }
+        }
+      });
+      
+      if (filterCompletionLabelElement) filterCompletionLabelElement.textContent = '筛选区域完成度：';
+      if (filterCompletionElement) filterCompletionElement.textContent = `${completedFilterGoals}/${totalFilterGoals}`;
+    } else {
+      // FATE模式
+      let totalFilterFates = 0;
+      let completedFilterFates = 0;
+      
+      // 只统计当前筛选地图的FATE
+      state.allFateData.forEach(fate => {
+        // 检查地图是否在筛选范围内
+        if (filterState.maps[fate.地图]) {
+          totalFilterFates++;
+          
+          // 检查FATE是否所有目标都完成
+          let allGoalsCompleted = true;
+          for (let idx = 0; idx < 4; idx++) {
+            const listGoalKey = `${fate.地图}|${fate.名称}|list-goal|${idx}`;
+            if (!state.completedGoals.has(listGoalKey)) {
+              allGoalsCompleted = false;
+              break;
+            }
+          }
+          if (allGoalsCompleted) {
+            completedFilterFates++;
+          }
+        }
+      });
+      
+      if (filterCompletionLabelElement) filterCompletionLabelElement.textContent = '筛选FATE完成度：';
+      if (filterCompletionElement) filterCompletionElement.textContent = `${completedFilterFates}/${totalFilterFates}`;
+    }
   }
 
   // 筛选FATE数据
@@ -1715,6 +1848,8 @@
     updateFilterChips();
     // 保存状态
     saveFilterState();
+    // 更新筛选区域完成度统计
+    updateFilterCompletionCount();
     // 重新渲染列表
     renderFateList();
   }
@@ -1804,6 +1939,7 @@
         
         chip.classList.toggle('active');
         saveFilterState(); // 保存筛选状态
+        updateFilterCompletionCount(); // 更新筛选区域完成度统计
         renderFateList(); // 重新渲染列表以应用筛选
       });
     });
