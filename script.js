@@ -550,8 +550,18 @@
       
       // 并行加载两个数据文件以提高速度
       const [specialResponse, allResponse] = await Promise.all([
-        fetch('./src/fate_data.json'),
-        fetch('./src/fate_common_data.json')
+        fetch('./src/fate_data.json', {
+          cache: 'force-cache', // 使用缓存以提高加载速度
+          headers: {
+            'Cache-Control': 'max-age=3600' // 缓存1小时
+          }
+        }),
+        fetch('./src/fate_common_data.json', {
+          cache: 'force-cache',
+          headers: {
+            'Cache-Control': 'max-age=3600'
+          }
+        })
       ]);
       
       if (!specialResponse.ok) throw new Error('Failed to load special FATE data');
@@ -562,12 +572,6 @@
         specialResponse.json(),
         allResponse.json()
       ]);
-      
-      console.log('McFATE: 加载数据完成', {
-        specialFates: fateData.length,
-        allFates: allFateData.length,
-        timestamp: new Date().toISOString()
-      });
       
       state.fateData = fateData;
       state.allFateData = allFateData;
