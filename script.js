@@ -2223,12 +2223,6 @@
       avatarImage.src = savedAvatar;
       avatarImage.style.display = 'block';
       document.querySelector('.avatar-placeholder').style.display = 'none';
-
-      // 应用保存的变换
-      const savedScale = localStorage.getItem('mcfate-avatar-scale') || 1;
-      const savedX = localStorage.getItem('mcfate-avatar-x') || 0;
-      const savedY = localStorage.getItem('mcfate-avatar-y') || 0;
-      avatarImage.style.transform = `scale(${savedScale}) translate(${savedX}px, ${savedY}px)`;
     }
 
     // 头像容器点击事件
@@ -2274,6 +2268,8 @@
         };
         reader.readAsDataURL(file);
       }
+      // 重置input的value，允许重复选择同一个文件
+      e.target.value = '';
     });
 
     // 模态框关闭事件
@@ -2331,14 +2327,20 @@
     // 应用初始变换
     applyAvatarTransform();
 
-    // 添加缩放控制事件
-    avatarScale.addEventListener('input', (e) => {
-      avatarScaleValue.textContent = Math.round(e.target.value * 100) + '%';
-      applyAvatarTransform();
-    });
+    // 初始化拖拽功能（只在第一次调用时绑定事件）
+    if (!avatarCropImage.dataset.dragInitialized) {
+      initAvatarDrag();
+      avatarCropImage.dataset.dragInitialized = 'true';
+    }
 
-    // 初始化拖拽功能
-    initAvatarDrag();
+    // 添加缩放控制事件（只在第一次调用时绑定）
+    if (!avatarScale.dataset.scaleInitialized) {
+      avatarScale.addEventListener('input', (e) => {
+        avatarScaleValue.textContent = Math.round(e.target.value * 100) + '%';
+        applyAvatarTransform();
+      });
+      avatarScale.dataset.scaleInitialized = 'true';
+    }
   }
 
   // 初始化头像拖拽功能
@@ -2352,16 +2354,9 @@
       startX = e.clientX;
       startY = e.clientY;
       
-      // 获取当前变换值
-      const transform = avatarCropImage.style.transform;
-      const translateMatch = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
-      if (translateMatch) {
-        startTranslateX = parseFloat(translateMatch[1]);
-        startTranslateY = parseFloat(translateMatch[2]);
-      } else {
-        startTranslateX = 0;
-        startTranslateY = 0;
-      }
+      // 获取当前保存的位移值
+      startTranslateX = parseFloat(localStorage.getItem('mcfate-avatar-x') || 0);
+      startTranslateY = parseFloat(localStorage.getItem('mcfate-avatar-y') || 0);
 
       e.preventDefault();
     });
@@ -2397,7 +2392,11 @@
     const x = localStorage.getItem('mcfate-avatar-x') || 0;
     const y = localStorage.getItem('mcfate-avatar-y') || 0;
 
-    avatarCropImage.style.transform = `scale(${scale}) translate(${x}px, ${y}px)`;
+    // 预览窗口中的变换：先居中，再应用缩放和位移
+    // 注意：这里的位移需要除以缩放比例，因为缩放会影响位移的实际效果
+    const adjustedX = x / scale;
+    const adjustedY = y / scale;
+    avatarCropImage.style.transform = `translate(-50%, -50%) scale(${scale}) translate(${adjustedX}px, ${adjustedY}px)`;
   }
 
   // 应用头像更改
@@ -2406,23 +2405,60 @@
     const avatarImage = document.getElementById('avatarImage');
     const avatarPlaceholder = document.querySelector('.avatar-placeholder');
 
-    // 保存头像数据
-    localStorage.setItem('mcfate-avatar-data', avatarCropImage.src);
+    // 创建canvas进行裁剪
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // 设置canvas大小为头像框大小
+    canvas.width = 120;
+    canvas.height = 120;
+    
+    // 获取当前变换参数
+    const avatarScale = document.getElementById('avatarScale');
+    const x = parseFloat(localStorage.getItem('mcfate-avatar-x') || 0);
+    const y = parseFloat(localStorage.getItem('mcfate-avatar-y') || 0);
+    const scale = parseFloat(avatarScale.value);
+    
+    // 参考McFisher移动端实现：直接绘制图片到canvas
+    const { width, height } = canvas;
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#222';
+    ctx.fillRect(0, 0, width, height);
+    
+    // 计算图片在canvas中的位置和大小
+    // 与预览窗口保持一致：图片居中，然后应用缩放和位移
+    const w = avatarCropImage.naturalWidth * scale;
+    const h = avatarCropImage.naturalHeight * scale;
+    const imgX = width / 2 + x;  // 居中位置 + 用户设置的位移
+    const imgY = height / 2 + y; // 居中位置 + 用户设置的位移
+    
+    // 绘制图片
+    ctx.drawImage(avatarCropImage, imgX - w/2, imgY - h/2, w, h);
+    
+    // 圆形遮罩（参考McFisher的移动端实现）
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-in';
+    const r = Math.min(width, height) * 0.48; // 120 * 0.48 = 57.6px，接近60px
+    ctx.beginPath();
+    ctx.arc(width/2, height/2, r, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+    
+    // 将裁剪后的图片转换为base64
+    const croppedImageData = canvas.toDataURL('image/png');
+    
+    // 保存裁剪后的头像数据
+    localStorage.setItem('mcfate-avatar-data', croppedImageData);
 
     // 更新显示的头像
-    avatarImage.src = avatarCropImage.src;
+    avatarImage.src = croppedImageData;
     avatarImage.style.display = 'block';
     avatarPlaceholder.style.display = 'none';
 
-    // 应用变换到显示的头像
-    const avatarScale = document.getElementById('avatarScale');
-    const x = localStorage.getItem('mcfate-avatar-x') || 0;
-    const y = localStorage.getItem('mcfate-avatar-y') || 0;
+    // 重置变换，因为已经裁剪了
+    avatarImage.style.transform = 'none';
 
-    const scale = avatarScale.value;
-    avatarImage.style.transform = `scale(${scale}) translate(${x}px, ${y}px)`;
-
-    // 保存当前的缩放值（用于显示最终头像）
+    // 保存变换参数
     localStorage.setItem('mcfate-avatar-scale', scale);
   }
 
