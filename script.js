@@ -17,184 +17,35 @@
   // 应用状态
   let state = {
     theme: 'light',
-    listView: false, // 列表视图状态
-    hideCompleted: false, // 隐藏已完成状态
-    fateData: [], // 倒计时列表使用的特殊FATE数据
-    allFateData: [], // 全部FATE数据，用于列表视图和统计
-    // 以  地图|名称|goal|idx|weather|time 为唯一标识，单目标标记
+    listView: false,
+    hideCompleted: false,
+    fateData: [],
+    allFateData: [],
     completedGoals: new Set(),
-    // 快速筛选状态
     quickFilters: {
-      timeLimit: false,
-      rune: false,
-      lucky: false,
-      highRisk: false,
-      weather: false,
-      time: false
+      timeLimit: false, rune: false, lucky: false, highRisk: false, weather: false, time: false
     },
-    // 统计显示模式：true为目标模式，false为FATE模式
-    completionDisplayMode: true, // 全局统计显示模式
-    filterCompletionDisplayMode: true // 筛选区域统计显示模式
+    completionDisplayMode: true,
+    filterCompletionDisplayMode: true
   };
 
-  // 列表顺序缓存：在没有"开始/结束"状态变化前保持相对稳定
+  // 列表顺序缓存
   let lastOrderIds = [];
-  const lastStatusById = new Map(); // id -> hasActive
+  const lastStatusById = new Map();
 
   // 导出数据的键列表
   const EXPORT_KEYS = [
-    'mcfate-theme',
-    'mcfate-list-view',
-    'mcfate-hide-completed',
-    'mcfate-completed-goals',
-    'mcfate-filter-state',
-    'mcfate-quick-filters'
+    'mcfate-theme', 'mcfate-list-view', 'mcfate-hide-completed', 'mcfate-completed-goals',
+    'mcfate-filter-state', 'mcfate-quick-filters'
   ];
 
-  function resetListOrderCache() {
-    lastOrderIds = [];
-    lastStatusById.clear();
-  }
+  // 艾欧泽亚时间常量
+  const EORZEA_HOUR_MS = 175000;
+  const EORZEA_8_HOUR_MS = 8 * EORZEA_HOUR_MS;
+  const EORZEA_DAY_MS = 24 * EORZEA_HOUR_MS;
+  const EORZEA_MINUTE_MS = EORZEA_HOUR_MS / 60;
 
-  // 重置其他快速筛选按钮
-  function resetOtherQuickFilters(activeFilter) {
-    const filterButtons = {
-      timeLimit: document.getElementById('timeLimitBtn'),
-      rune: document.getElementById('runeBtn'),
-      lucky: document.getElementById('luckyBtn'),
-      highRisk: document.getElementById('highRiskBtn'),
-      weather: document.getElementById('weatherBtn'),
-      time: document.getElementById('timeBtn')
-    };
-
-    Object.keys(state.quickFilters).forEach(key => {
-      if (key !== activeFilter) {
-        state.quickFilters[key] = false;
-        if (filterButtons[key]) {
-          filterButtons[key].classList.remove('active');
-        }
-      }
-    });
-  }
-
-  // 快速筛选逻辑
-  function applyQuickFilters(fate) {
-    // 限时筛选：检查目标中是否包含时间关键词
-    if (state.quickFilters.timeLimit) {
-      const timeKeywords = ['10秒', '90秒', '120秒', '180秒', '240秒', '300秒', '600秒'];
-      const goalsText = String(fate.危命目标 || '').toLowerCase();
-      const hasTimeLimit = timeKeywords.some(keyword => goalsText.includes(keyword.toLowerCase()));
-      if (!hasTimeLimit) return false;
-    }
-
-    // 其他筛选条件（待实现）
-    if (state.quickFilters.rune) {
-      // 符文筛选：检查目标中是否包含"符文"关键词
-      const goalsText = String(fate.危命目标 || '').toLowerCase();
-      const hasRune = goalsText.includes('符文');
-      if (!hasRune) return false;
-    }
-
-    if (state.quickFilters.lucky) {
-      // 幸运筛选：检查目标中是否包含"幸运"关键词
-      const goalsText = String(fate.危命目标 || '').toLowerCase();
-      const hasLucky = goalsText.includes('幸运');
-      if (!hasLucky) return false;
-    }
-
-    if (state.quickFilters.highRisk) {
-      // 高危筛选：检查目标中是否包含"高危"关键词
-      const goalsText = String(fate.危命目标 || '').toLowerCase();
-      const hasHighRisk = goalsText.includes('高危');
-      if (!hasHighRisk) return false;
-    }
-
-    if (state.quickFilters.weather) {
-      // 天气筛选：检查目标中是否包含天气相关关键词
-      const weatherKeywords = ['天气', '雨天', '晴天'];
-      const goalsText = String(fate.危命目标 || '').toLowerCase();
-      const hasWeatherKeyword = weatherKeywords.some(keyword => goalsText.includes(keyword.toLowerCase()));
-      if (!hasWeatherKeyword) return false;
-    }
-
-    if (state.quickFilters.time) {
-      // 时间筛选：检查是否包含"白天"或"夜晚"关键词
-      const goalsText = String(fate.危命目标 || '').toLowerCase();
-      const hasTimeKeyword = goalsText.includes('白天') || goalsText.includes('夜晚');
-      if (!hasTimeKeyword) return false;
-    }
-
-    return true; // 没有筛选条件时返回true
-  }
-
-  // 导出本地数据
-  function exportLocalData() {
-    const data = {};
-    // 导出所有配置数据
-    for (const k of EXPORT_KEYS) {
-      try { 
-        const value = localStorage.getItem(k);
-        if (value !== null) {
-          data[k] = value; 
-        }
-      } catch(e) {
-        console.warn(`导出键 ${k} 失败:`, e);
-      }
-    }
-    
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; 
-    a.download = 'mcfate-backup.json';
-    document.body.appendChild(a); 
-    a.click(); 
-    a.remove();
-    URL.revokeObjectURL(url);
-    
-    console.log('FATE数据已导出');
-  }
-
-  // 导入本地数据
-  function importLocalData(file) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const obj = JSON.parse(String(reader.result || '{}'));
-        let importedCount = 0;
-        
-        Object.keys(obj).forEach(k => {
-          try { 
-            localStorage.setItem(k, obj[k]); 
-            importedCount++;
-          } catch(e) {
-            console.warn(`导入键 ${k} 失败:`, e);
-          }
-        });
-        
-        // 重新载入状态
-        loadPreferences();
-        loadFilterState();
-        updateFilterChips();
-        renderFateList();
-        
-        console.log(`成功导入 ${importedCount} 个配置项`);
-        alert('数据已导入，页面已刷新');
-      } catch (e) {
-        console.error('导入失败:', e);
-        alert('导入失败：文件格式错误');
-      }
-    };
-    reader.readAsText(file);
-  }
-
-  // 艾欧泽亚时间常量（与McWeather一致）
-  const EORZEA_HOUR_MS = 175000; // 1艾欧泽亚小时 = 175秒 = 175000毫秒
-  const EORZEA_8_HOUR_MS = 8 * EORZEA_HOUR_MS; // 8艾欧泽亚小时
-  const EORZEA_DAY_MS = 24 * EORZEA_HOUR_MS; // 1艾欧泽亚天
-  const EORZEA_MINUTE_MS = EORZEA_HOUR_MS / 60; // 1艾欧泽亚分钟对应的现实毫秒
-
-  // 天气系统常量（从McWeather继承）
+  // 天气系统常量
   const WEATHER_DATA = {
     uldah: [{ name: 'clearSkies', chance: 40 }, { name: 'fairSkies', chance: 20 }, { name: 'clouds', chance: 25 }, { name: 'fog', chance: 10 }, { name: 'rain', chance: 5 }],
     westernThanalan: [{ name: 'clearSkies', chance: 40 }, { name: 'fairSkies', chance: 20 }, { name: 'clouds', chance: 25 }, { name: 'fog', chance: 10 }, { name: 'rain', chance: 5 }],
@@ -220,65 +71,144 @@
 
   // 地图名称映射
   const MAP_NAMES = {
-    '西萨纳兰': 'westernThanalan',
-    '中萨纳兰': 'centralThanalan',
-    '东萨纳兰': 'easternThanalan',
-    '南萨纳兰': 'southernThanalan',
-    '北萨纳兰': 'northernThanalan',
-    '乌尔达哈': 'uldah',
-    '黑衣森林中部林区': 'centralShroud',
-    '黑衣森林东部林区': 'eastShroud',
-    '黑衣森林南部林区': 'southShroud',
-    '黑衣森林北部林区': 'northShroud',
-    '格里达尼亚': 'gridania',
-    '中拉诺西亚': 'middleLaNoscea',
-    '拉诺西亚低地': 'lowerLaNoscea',
-    '东拉诺西亚': 'easternLaNoscea',
-    '西拉诺西亚': 'westernLaNoscea',
-    '拉诺西亚高地': 'upperLaNoscea',
-    '拉诺西亚外地': 'outerLaNoscea',
-    '利姆萨·罗敏萨': 'limsaLominsa',
-    '库尔札斯中央高地': 'coerthasCentralHighlands',
-    '摩杜纳': 'morDhona'
+    '西萨纳兰': 'westernThanalan', '中萨纳兰': 'centralThanalan', '东萨纳兰': 'easternThanalan',
+    '南萨纳兰': 'southernThanalan', '北萨纳兰': 'northernThanalan', '乌尔达哈': 'uldah',
+    '黑衣森林中部林区': 'centralShroud', '黑衣森林东部林区': 'eastShroud',
+    '黑衣森林南部林区': 'southShroud', '黑衣森林北部林区': 'northShroud', '格里达尼亚': 'gridania',
+    '中拉诺西亚': 'middleLaNoscea', '拉诺西亚低地': 'lowerLaNoscea', '东拉诺西亚': 'easternLaNoscea',
+    '西拉诺西亚': 'westernLaNoscea', '拉诺西亚高地': 'upperLaNoscea', '拉诺西亚外地': 'outerLaNoscea',
+    '利姆萨·罗敏萨': 'limsaLominsa', '库尔札斯中央高地': 'coerthasCentralHighlands', '摩杜纳': 'morDhona'
   };
 
   // 天气名称映射
   const WEATHER_NAMES_CN = {
-    clearSkies: '碧空',
-    fairSkies: '晴朗',
-    clouds: '阴云',
-    fog: '薄雾',
-    rain: '小雨',
-    showers: '暴雨',
-    wind: '微风',
-    gales: '强风',
-    thunder: '打雷',
-    thunderstorms: '雷雨',
-    snow: '小雪',
-    blizzard: '暴雪',
-    gloom: '妖雾',
-    heatWaves: '热浪',
-    dustStorms: '扬沙'
+    clearSkies: '碧空', fairSkies: '晴朗', clouds: '阴云', fog: '薄雾', rain: '小雨',
+    showers: '暴雨', wind: '微风', gales: '强风', thunder: '打雷', thunderstorms: '雷雨',
+    snow: '小雪', blizzard: '暴雪', gloom: '妖雾', heatWaves: '热浪', dustStorms: '扬沙'
   };
 
-  // 反向天气名称映射（中文到英文）
+  // 反向天气名称映射
   const WEATHER_NAMES_EN = {};
   Object.keys(WEATHER_NAMES_CN).forEach(key => {
     WEATHER_NAMES_EN[WEATHER_NAMES_CN[key]] = key;
   });
 
-  // 规则：天气集合中文合并显示
+  // 工具函数
+  function resetListOrderCache() {
+    lastOrderIds = [];
+    lastStatusById.clear();
+  }
+
+  function resetOtherQuickFilters(activeFilter) {
+    const filterButtons = {
+      timeLimit: document.getElementById('timeLimitBtn'),
+      rune: document.getElementById('runeBtn'),
+      lucky: document.getElementById('luckyBtn'),
+      highRisk: document.getElementById('highRiskBtn'),
+      weather: document.getElementById('weatherBtn'),
+      time: document.getElementById('timeBtn')
+    };
+
+    Object.keys(state.quickFilters).forEach(key => {
+      if (key !== activeFilter) {
+        state.quickFilters[key] = false;
+        if (filterButtons[key]) {
+          filterButtons[key].classList.remove('active');
+        }
+      }
+    });
+  }
+
+  function applyQuickFilters(fate) {
+    const goalsText = String(fate.危命目标 || '').toLowerCase();
+    
+    if (state.quickFilters.timeLimit) {
+      const timeKeywords = ['10秒', '90秒', '120秒', '180秒', '240秒', '300秒', '600秒'];
+      const hasTimeLimit = timeKeywords.some(keyword => goalsText.includes(keyword.toLowerCase()));
+      if (!hasTimeLimit) return false;
+    }
+
+    if (state.quickFilters.rune && !goalsText.includes('符文')) return false;
+    if (state.quickFilters.lucky && !goalsText.includes('幸运')) return false;
+    if (state.quickFilters.highRisk && !goalsText.includes('高危')) return false;
+    
+    if (state.quickFilters.weather) {
+      const weatherKeywords = ['天气', '雨天', '晴天'];
+      const hasWeatherKeyword = weatherKeywords.some(keyword => goalsText.includes(keyword.toLowerCase()));
+      if (!hasWeatherKeyword) return false;
+    }
+
+    if (state.quickFilters.time) {
+      const hasTimeKeyword = goalsText.includes('白天') || goalsText.includes('夜晚');
+      if (!hasTimeKeyword) return false;
+    }
+
+    return true;
+  }
+
+  function exportLocalData() {
+    const data = {};
+    for (const k of EXPORT_KEYS) {
+      try { 
+        const value = localStorage.getItem(k);
+        if (value !== null) data[k] = value; 
+      } catch(e) {
+        console.warn(`导出键 ${k} 失败:`, e);
+      }
+    }
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; 
+    a.download = 'mcfate-backup.json';
+    document.body.appendChild(a); 
+    a.click(); 
+    a.remove();
+    URL.revokeObjectURL(url);
+    
+    console.log('FATE数据已导出');
+  }
+
+  function importLocalData(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const obj = JSON.parse(String(reader.result || '{}'));
+        let importedCount = 0;
+        
+        Object.keys(obj).forEach(k => {
+          try { 
+            localStorage.setItem(k, obj[k]); 
+            importedCount++;
+          } catch(e) {
+            console.warn(`导入键 ${k} 失败:`, e);
+          }
+        });
+        
+        loadPreferences();
+        loadFilterState();
+        updateFilterChips();
+        renderFateList();
+        
+        console.log(`成功导入 ${importedCount} 个配置项`);
+        alert('数据已导入，页面已刷新');
+      } catch (e) {
+        console.error('导入失败:', e);
+        alert('导入失败：文件格式错误');
+      }
+    };
+    reader.readAsText(file);
+  }
+
   function normalizeWeatherLabel(cn) {
     const s = String(cn || '').trim();
     if (!s) return '';
-    // 小雨|雷雨|暴雨 → 雨天
     if (/(小雨\|雷雨\|暴雨)|(小雨\|暴雨\|雷雨)/.test(s)) return '雨天';
-    // 碧空|晴朗 → 晴天
     if (/碧空\|晴朗|晴朗\|碧空/.test(s)) return '晴天';
     return s;
   }
 
-  // HTML转义（弹窗列表安全输出）
   function escapeHtml(text) {
     return String(text).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
   }
@@ -286,6 +216,7 @@
   // 目标说明弹出层
   let currentGoalPopover = null;
   let currentGoalPopoverAnchor = null;
+  
   function hideGoalPopover() {
     if (currentGoalPopover) {
       currentGoalPopover.remove();
@@ -296,10 +227,12 @@
       window.removeEventListener('resize', hideGoalPopover, true);
     }
   }
+  
   function onDocClickForPopover(e) {
     if (!currentGoalPopover) return;
     if (!currentGoalPopover.contains(e.target)) hideGoalPopover();
   }
+  
   function showGoalPopover(anchorEl, fate) {
     hideGoalPopover();
     const pop = document.createElement('div');
@@ -309,7 +242,7 @@
     const listHtml = lines.length ? lines.map(l => `<li>${escapeHtml(l)}</li>`).join('') : '<li>No target requirements</li>';
     pop.innerHTML = `<div class="gp-title">${escapeHtml(fate.名称)} · 危命目标</div><ul class="gp-list">${listHtml}</ul>`;
     document.body.appendChild(pop);
-    // 定位：元素下方
+    
     const rect = anchorEl.getBoundingClientRect();
     const top = rect.bottom + 8;
     let left = rect.left;
@@ -319,7 +252,7 @@
     pop.style.left = `${left}px`;
     currentGoalPopover = pop;
     currentGoalPopoverAnchor = anchorEl;
-    // 关闭事件
+    
     setTimeout(() => document.addEventListener('click', onDocClickForPopover, true), 0);
     window.addEventListener('scroll', hideGoalPopover, true);
     window.addEventListener('resize', hideGoalPopover, true);
@@ -329,10 +262,10 @@
   function init() {
     loadPreferences();
     setupEventListeners();
-    // 立即开始加载数据，不等待DOM完全加载
     loadFateData();
     setupPeriodicUpdates();
     updateCurrentStatus();
+    initCardInputs();
   }
 
   // 加载用户偏好设置
@@ -341,7 +274,6 @@
     state.listView = localStorage.getItem('mcfate-list-view') === 'true';
     state.hideCompleted = localStorage.getItem('mcfate-hide-completed') === 'true';
     
-    // 加载快速筛选状态
     try {
       const savedFilters = JSON.parse(localStorage.getItem('mcfate-quick-filters') || '{}');
       Object.keys(state.quickFilters).forEach(key => {
@@ -353,7 +285,6 @@
       console.warn('加载快速筛选状态失败:', e);
     }
     
-    // 加载统计显示模式
     const savedCompletionMode = localStorage.getItem('mcfate-completion-display-mode');
     if (savedCompletionMode !== null) {
       state.completionDisplayMode = savedCompletionMode === 'true';
@@ -364,15 +295,12 @@
       state.filterCompletionDisplayMode = savedFilterCompletionMode === 'true';
     }
     
-    // 读取已完成目标记录
     try {
       const saved = JSON.parse(localStorage.getItem('mcfate-completed-goals') || '[]');
       if (Array.isArray(saved)) {
-        // 验证数据格式，确保所有项目都是字符串
         const validItems = saved.filter(item => typeof item === 'string');
         state.completedGoals = new Set(validItems);
         
-        // 如果数据被过滤了，保存清理后的数据
         if (validItems.length !== saved.length) {
           console.log(`清理了 ${saved.length - validItems.length} 个无效的已完成目标记录`);
           localStorage.setItem('mcfate-completed-goals', JSON.stringify(validItems));
@@ -385,51 +313,30 @@
       state.completedGoals = new Set(); 
     }
 
-    // 应用主题
     document.body.setAttribute('data-theme', state.theme);
     updateThemeButtonIcon();
     
-    // 应用列表视图状态
     elements.listToggle.classList.toggle('active', state.listView);
     document.getElementById('fateContainer').classList.toggle('list-view', state.listView);
     
-    // 应用隐藏已完成状态
     elements.hideCompletedBtn.classList.toggle('active', state.hideCompleted);
     updateHideButtonIcon();
 
     // 应用快速筛选按钮状态
-    const timeLimitBtn = document.getElementById('timeLimitBtn');
-    if (timeLimitBtn) {
-      timeLimitBtn.classList.toggle('active', state.quickFilters.timeLimit);
-    }
-    
-    const runeBtn = document.getElementById('runeBtn');
-    if (runeBtn) {
-      runeBtn.classList.toggle('active', state.quickFilters.rune);
-    }
-    
-    const luckyBtn = document.getElementById('luckyBtn');
-    if (luckyBtn) {
-      luckyBtn.classList.toggle('active', state.quickFilters.lucky);
-    }
-    
-    const highRiskBtn = document.getElementById('highRiskBtn');
-    if (highRiskBtn) {
-      highRiskBtn.classList.toggle('active', state.quickFilters.highRisk);
-    }
+    const filterButtons = {
+      timeLimit: document.getElementById('timeLimitBtn'),
+      rune: document.getElementById('runeBtn'),
+      lucky: document.getElementById('luckyBtn'),
+      highRisk: document.getElementById('highRiskBtn'),
+      time: document.getElementById('timeBtn'),
+      weather: document.getElementById('weatherBtn')
+    };
 
-    const timeBtn = document.getElementById('timeBtn');
-    if (timeBtn) {
-      timeBtn.classList.toggle('active', state.quickFilters.time);
-    }
-    
-    const weatherBtn = document.getElementById('weatherBtn');
-    if (weatherBtn) {
-      weatherBtn.classList.toggle('active', state.quickFilters.weather);
-    }
-
-    // 应用筛选面板状态
-    // 无筛选界面
+    Object.keys(filterButtons).forEach(key => {
+      if (filterButtons[key]) {
+        filterButtons[key].classList.toggle('active', state.quickFilters[key]);
+      }
+    });
   }
 
   function persistCompleted() {
@@ -560,83 +467,28 @@
     }
 
     // 快速筛选按钮事件监听器
-    const timeLimitBtn = document.getElementById('timeLimitBtn');
-    if (timeLimitBtn) {
-      timeLimitBtn.addEventListener('click', () => {
-        state.quickFilters.timeLimit = !state.quickFilters.timeLimit;
-        timeLimitBtn.classList.toggle('active', state.quickFilters.timeLimit);
-        // 重置其他筛选按钮
-        resetOtherQuickFilters('timeLimit');
-        persistQuickFilters();
-        updateFilterCompletionCount();
-        renderFateList();
-      });
-    }
+    const filterButtons = {
+      timeLimit: document.getElementById('timeLimitBtn'),
+      rune: document.getElementById('runeBtn'),
+      lucky: document.getElementById('luckyBtn'),
+      highRisk: document.getElementById('highRiskBtn'),
+      time: document.getElementById('timeBtn'),
+      weather: document.getElementById('weatherBtn')
+    };
 
-    const runeBtn = document.getElementById('runeBtn');
-    if (runeBtn) {
-      runeBtn.addEventListener('click', () => {
-        state.quickFilters.rune = !state.quickFilters.rune;
-        runeBtn.classList.toggle('active', state.quickFilters.rune);
-        // 重置其他筛选按钮
-        resetOtherQuickFilters('rune');
-        persistQuickFilters();
-        updateFilterCompletionCount();
-        renderFateList();
-      });
-    }
-
-    const luckyBtn = document.getElementById('luckyBtn');
-    if (luckyBtn) {
-      luckyBtn.addEventListener('click', () => {
-        state.quickFilters.lucky = !state.quickFilters.lucky;
-        luckyBtn.classList.toggle('active', state.quickFilters.lucky);
-        // 重置其他筛选按钮
-        resetOtherQuickFilters('lucky');
-        persistQuickFilters();
-        updateFilterCompletionCount();
-        renderFateList();
-      });
-    }
-
-    const highRiskBtn = document.getElementById('highRiskBtn');
-    if (highRiskBtn) {
-      highRiskBtn.addEventListener('click', () => {
-        state.quickFilters.highRisk = !state.quickFilters.highRisk;
-        highRiskBtn.classList.toggle('active', state.quickFilters.highRisk);
-        // 重置其他筛选按钮
-        resetOtherQuickFilters('highRisk');
-        persistQuickFilters();
-        updateFilterCompletionCount();
-        renderFateList();
-      });
-    }
-
-    const timeBtn = document.getElementById('timeBtn');
-    if (timeBtn) {
-      timeBtn.addEventListener('click', () => {
-        state.quickFilters.time = !state.quickFilters.time;
-        timeBtn.classList.toggle('active', state.quickFilters.time);
-        // 重置其他筛选按钮
-        resetOtherQuickFilters('time');
-        persistQuickFilters();
-        updateFilterCompletionCount();
-        renderFateList();
-      });
-    }
-
-    const weatherBtn = document.getElementById('weatherBtn');
-    if (weatherBtn) {
-      weatherBtn.addEventListener('click', () => {
-        state.quickFilters.weather = !state.quickFilters.weather;
-        weatherBtn.classList.toggle('active', state.quickFilters.weather);
-        // 重置其他筛选按钮
-        resetOtherQuickFilters('weather');
-        persistQuickFilters();
-        updateFilterCompletionCount();
-        renderFateList();
-      });
-    }
+    Object.keys(filterButtons).forEach(key => {
+      const btn = filterButtons[key];
+      if (btn) {
+        btn.addEventListener('click', () => {
+          state.quickFilters[key] = !state.quickFilters[key];
+          btn.classList.toggle('active', state.quickFilters[key]);
+          resetOtherQuickFilters(key);
+          persistQuickFilters();
+          updateFilterCompletionCount();
+          renderFateList();
+        });
+      }
+    });
 
     // 统计显示模式切换按钮
     const completionToggleBtn = document.getElementById('completionToggleBtn');
@@ -748,15 +600,14 @@
     // 无地图选择器
   }
 
-  // 艾欧泽亚时间计算（与McWeather一致）
+  // 时间计算函数
   function getEorzeaTime(unixMs = Date.now()) {
     const eorzeaMs = Math.floor(unixMs / EORZEA_HOUR_MS) * EORZEA_HOUR_MS;
     const bell = Math.floor(unixMs / EORZEA_HOUR_MS) % 24;
-    const minute = Math.floor((unixMs % EORZEA_HOUR_MS) / (EORZEA_HOUR_MS / 60));
+    const minute = Math.floor((unixMs % EORZEA_HOUR_MS) / EORZEA_MINUTE_MS);
     return { bell, minute, eorzeaMs };
   }
 
-  // 格式化艾欧泽亚时间
   function formatEorzeaTime(bell, minute) {
     return `${String(bell).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
   }
@@ -785,12 +636,11 @@
     return `${hh}:${mm}`;
   }
 
-  // 判断是否是白天（6:00-18:00）
   function isDaytime(bell) {
     return bell >= 6 && bell < 18;
   }
 
-  // 天气值计算（与McWeather一致）
+  // 天气计算函数
   function calculateWeatherValue(unixMs) {
     const ms = Math.floor(unixMs);
     const bell = Math.floor(ms / EORZEA_HOUR_MS) % 24;
@@ -802,14 +652,12 @@
     return step2 % 100;
   }
 
-  // 获取最近的8小时间隔开始时间
   function nearestIntervalStart(unixMs) {
     const bell = Math.floor(unixMs / EORZEA_HOUR_MS);
     const alignedBell = bell - (bell % 8);
     return alignedBell * EORZEA_HOUR_MS;
   }
 
-  // 根据天气值选择天气
   function pickWeatherByValue(zoneKey, value) {
     const table = WEATHER_DATA[zoneKey] || [];
     let cursor = 0;
@@ -820,7 +668,6 @@
     return table[table.length - 1] || { name: 'clearSkies', chance: 100 };
   }
 
-  // 获取指定地图的当前天气
   function getCurrentWeather(mapName) {
     const zoneKey = MAP_NAMES[mapName];
     if (!zoneKey) return null;
@@ -990,8 +837,7 @@
     // 兼容 "11:10 - 12:10" 一行写法
     let aStr = appearStr, dStr = disappearStr;
     if (!dStr && aStr && /-|–|—/.test(String(aStr))) {
-      const [s1, s2] = splitEtRangeMaybe(String(aStr));
-      aStr = s1; dStr = s2;
+      const [s1, s2] = splitEtRangeMaybe(String(aStr)); aStr = s1; dStr = s2;
     }
     const appear = parseEtTimeStr(aStr);
     const disappear = parseEtTimeStr(dStr);
@@ -1266,6 +1112,9 @@
     
     // 更新筛选区域完成度统计
     updateFilterCompletionCount();
+    
+    // 更新证件上的完成数量
+    updateCardCompletionCount();
   }
 
   // 更新筛选区域完成度统计
@@ -2247,5 +2096,331 @@
       filterBtn.classList.toggle('active', !filterDropdown.classList.contains('hidden'));
     }
   });
+
+  // 证件翻转功能
+  function flipCard() {
+    const flipCard = document.getElementById('flipCard');
+    flipCard.classList.toggle('flipped');
+  }
+
+  // 更新证件上的完成数量
+  function updateCardCompletionCount() {
+    const cardCompletionCount = document.getElementById('cardCompletionCount');
+    if (cardCompletionCount && state.allFateData) {
+      if (state.completionDisplayMode) {
+        // 目标模式
+        let totalGoals = 0;
+        let completedGoals = 0;
+        
+        // 使用全部FATE数据进行统计，每个FATE有4个目标
+        state.allFateData.forEach(fate => {
+          totalGoals += 4; // 每个FATE固定4个目标
+          
+          // 检查每个目标的完成状态
+          for (let idx = 0; idx < 4; idx++) {
+            const listGoalKey = `${fate.地图}|${fate.名称}|list-goal|${idx}`;
+            if (state.completedGoals.has(listGoalKey)) {
+              completedGoals++;
+            }
+          }
+        });
+        
+        cardCompletionCount.textContent = `${completedGoals}/${totalGoals}`;
+        
+        // 更新称号
+        updateCardTitle(completedGoals);
+      } else {
+        // FATE模式
+        let totalFates = state.allFateData.length;
+        let completedFates = 0;
+        
+        // 统计已完成的FATE数量（4个目标都完成的FATE）
+        state.allFateData.forEach(fate => {
+          let allGoalsCompleted = true;
+          for (let idx = 0; idx < 4; idx++) {
+            const listGoalKey = `${fate.地图}|${fate.名称}|list-goal|${idx}`;
+            if (!state.completedGoals.has(listGoalKey)) {
+              allGoalsCompleted = false;
+              break;
+            }
+          }
+          if (allGoalsCompleted) {
+            completedFates++;
+          }
+        });
+        
+        cardCompletionCount.textContent = `${completedFates}/${totalFates}`;
+        
+        // 更新称号（FATE模式下不更新称号，因为称号基于目标数量）
+      }
+    }
+  }
+
+  // 更新证件上的称号
+  function updateCardTitle(completedGoals) {
+    const cardTitle = document.getElementById('cardTitle');
+    if (cardTitle) {
+      if (completedGoals >= 1000) {
+        cardTitle.textContent = '危机平定者';
+      } else if (completedGoals >= 500) {
+        cardTitle.textContent = '危机践行者';
+      } else if (completedGoals >= 200) {
+        cardTitle.textContent = '危机洞察者';
+      } else {
+        cardTitle.textContent = '无';
+      }
+    }
+  }
+
+  // 初始化证件信息输入框
+  function initCardInputs() {
+    const cardHolderName = document.getElementById('cardHolderName');
+    const cardServerName = document.getElementById('cardServerName');
+
+    // 从本地存储加载数据
+    const savedName = localStorage.getItem('mcfate-card-holder-name');
+    const savedServer = localStorage.getItem('mcfate-card-server-name');
+    
+    if (savedName) cardHolderName.value = savedName;
+    if (savedServer) cardServerName.value = savedServer;
+
+    // 添加输入事件监听器
+    cardHolderName.addEventListener('input', (e) => {
+      localStorage.setItem('mcfate-card-holder-name', e.target.value);
+    });
+
+    cardServerName.addEventListener('input', (e) => {
+      localStorage.setItem('mcfate-card-server-name', e.target.value);
+    });
+
+    // 防止点击输入框时触发卡片翻转
+    cardHolderName.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
+    cardServerName.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
+    // 初始化头像功能
+    initAvatar();
+  }
+
+  // 初始化头像功能
+  function initAvatar() {
+    const avatarContainer = document.getElementById('avatarContainer');
+    const avatarImage = document.getElementById('avatarImage');
+    const avatarUpload = document.getElementById('avatarUpload');
+    const avatarModal = document.getElementById('avatarModal');
+    const avatarCropImage = document.getElementById('avatarCropImage');
+    const avatarModalClose = document.getElementById('avatarModalClose');
+    const avatarCancelBtn = document.getElementById('avatarCancelBtn');
+    const avatarConfirmBtn = document.getElementById('avatarConfirmBtn');
+
+    // 从本地存储加载头像
+    const savedAvatar = localStorage.getItem('mcfate-avatar-data');
+    if (savedAvatar) {
+      avatarImage.src = savedAvatar;
+      avatarImage.style.display = 'block';
+      document.querySelector('.avatar-placeholder').style.display = 'none';
+    }
+
+    // 头像容器点击事件
+    avatarContainer.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      avatarUpload.click();
+    });
+
+    // 防止头像区域触发证件翻转
+    avatarContainer.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+    });
+
+    avatarContainer.addEventListener('mouseup', (e) => {
+      e.stopPropagation();
+    });
+
+    // 为头像区域的所有子元素也添加事件阻止
+    const avatarSection = document.querySelector('.avatar-section');
+    if (avatarSection) {
+      avatarSection.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+      
+      avatarSection.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+      });
+      
+      avatarSection.addEventListener('mouseup', (e) => {
+        e.stopPropagation();
+      });
+    }
+
+    // 文件上传事件
+    avatarUpload.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          // 上传后直接打开调整框
+          openAvatarModal(e.target.result);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // 模态框关闭事件
+    avatarModalClose.addEventListener('click', closeAvatarModal);
+    avatarCancelBtn.addEventListener('click', closeAvatarModal);
+
+    // 确认按钮事件
+    avatarConfirmBtn.addEventListener('click', () => {
+      applyAvatarChanges();
+      closeAvatarModal();
+    });
+
+    // 防止模态框内部点击事件冒泡
+    avatarModal.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+  }
+
+  // 打开头像调整模态框
+  function openAvatarModal(imageData = null) {
+    const avatarModal = document.getElementById('avatarModal');
+    const avatarCropImage = document.getElementById('avatarCropImage');
+    const avatarImage = document.getElementById('avatarImage');
+
+    if (imageData) {
+      avatarCropImage.src = imageData;
+    } else if (avatarImage.src) {
+      avatarCropImage.src = avatarImage.src;
+    }
+
+    avatarModal.classList.remove('hidden');
+    initAvatarControls();
+  }
+
+  // 关闭头像调整模态框
+  function closeAvatarModal() {
+    const avatarModal = document.getElementById('avatarModal');
+    avatarModal.classList.add('hidden');
+  }
+
+  // 初始化头像控制
+  function initAvatarControls() {
+    const avatarCropImage = document.getElementById('avatarCropImage');
+    const avatarScale = document.getElementById('avatarScale');
+    const avatarScaleValue = document.getElementById('avatarScaleValue');
+
+    // 每次打开都重置到中间位置（100%）
+    avatarScale.value = 1;
+    avatarScaleValue.textContent = '100%';
+
+    // 从本地存储加载位置参数（但不加载缩放）
+    const savedX = localStorage.getItem('mcfate-avatar-x') || 0;
+    const savedY = localStorage.getItem('mcfate-avatar-y') || 0;
+
+    // 应用初始变换
+    applyAvatarTransform();
+
+    // 添加缩放控制事件
+    avatarScale.addEventListener('input', (e) => {
+      avatarScaleValue.textContent = Math.round(e.target.value * 100) + '%';
+      applyAvatarTransform();
+    });
+
+    // 初始化拖拽功能
+    initAvatarDrag();
+  }
+
+  // 初始化头像拖拽功能
+  function initAvatarDrag() {
+    const avatarCropImage = document.getElementById('avatarCropImage');
+    let isDragging = false;
+    let startX, startY, startTranslateX, startTranslateY;
+
+    avatarCropImage.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      
+      // 获取当前变换值
+      const transform = avatarCropImage.style.transform;
+      const translateMatch = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
+      if (translateMatch) {
+        startTranslateX = parseFloat(translateMatch[1]);
+        startTranslateY = parseFloat(translateMatch[2]);
+      } else {
+        startTranslateX = 0;
+        startTranslateY = 0;
+      }
+
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+
+      const deltaX = e.clientX - startX;
+      const deltaY = e.clientY - startY;
+      
+      // 计算新的位置（限制在合理范围内）
+      const newX = Math.max(-100, Math.min(100, startTranslateX + deltaX));
+      const newY = Math.max(-100, Math.min(100, startTranslateY + deltaY));
+
+      // 保存位置到本地存储
+      localStorage.setItem('mcfate-avatar-x', newX);
+      localStorage.setItem('mcfate-avatar-y', newY);
+
+      applyAvatarTransform();
+    });
+
+    document.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+  }
+
+  // 应用头像变换
+  function applyAvatarTransform() {
+    const avatarCropImage = document.getElementById('avatarCropImage');
+    const avatarScale = document.getElementById('avatarScale');
+
+    const scale = avatarScale.value;
+    const x = localStorage.getItem('mcfate-avatar-x') || 0;
+    const y = localStorage.getItem('mcfate-avatar-y') || 0;
+
+    avatarCropImage.style.transform = `scale(${scale}) translate(${x}px, ${y}px)`;
+  }
+
+  // 应用头像更改
+  function applyAvatarChanges() {
+    const avatarCropImage = document.getElementById('avatarCropImage');
+    const avatarImage = document.getElementById('avatarImage');
+    const avatarPlaceholder = document.querySelector('.avatar-placeholder');
+
+    // 保存头像数据
+    localStorage.setItem('mcfate-avatar-data', avatarCropImage.src);
+
+    // 更新显示的头像
+    avatarImage.src = avatarCropImage.src;
+    avatarImage.style.display = 'block';
+    avatarPlaceholder.style.display = 'none';
+
+    // 应用变换到显示的头像
+    const avatarScale = document.getElementById('avatarScale');
+    const x = localStorage.getItem('mcfate-avatar-x') || 0;
+    const y = localStorage.getItem('mcfate-avatar-y') || 0;
+
+    const scale = avatarScale.value;
+    avatarImage.style.transform = `scale(${scale}) translate(${x}px, ${y}px)`;
+
+    // 保存当前的缩放值（用于显示最终头像）
+    localStorage.setItem('mcfate-avatar-scale', scale);
+  }
+
+  // 将flipCard函数暴露到全局作用域
+  window.flipCard = flipCard;
 
 })();

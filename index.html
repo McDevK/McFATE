@@ -13,23 +13,19 @@
   <main class="fate-container" id="fateContainer">
     <header class="fate-header">
       <div class="fate-title">
-        <!-- <a href="../" class="home-link" title="返回主页">
-          <img src="./assets/icons/button/back.png" alt="返回" class="back-icon">
-        </a> -->
         <img src="./assets/icons/button/FATE.png" alt="FATE" class="fate-logo"><span>F.A.T.E.计时器</span>
       </div>
-              <div class="fate-actions">
-          <!-- 时间显示 -->
-          <div class="local-time-box" title="Eorzea / Local Time">
-            <div class="time-row et">
-              <span class="time-label">艾</span>
-              <span class="time-value" id="eorzeaTimeValue">00:00</span>
-            </div>
-            <div class="time-row lt">
-              <span class="time-label">本</span>
-              <span class="time-value" id="localTimeValue">00:00</span>
-            </div>
+      <div class="fate-actions">
+        <div class="local-time-box" title="Eorzea / Local Time">
+          <div class="time-row et">
+            <span class="time-label">艾</span>
+            <span class="time-value" id="eorzeaTimeValue">00:00</span>
           </div>
+          <div class="time-row lt">
+            <span class="time-label">本</span>
+            <span class="time-value" id="localTimeValue">00:00</span>
+          </div>
+        </div>
         <button class="fate-btn fate-list-toggle" id="listToggle" title="列表视图" aria-label="列表视图">
           <img src="./assets/icons/button/list.png" alt="列表" class="list-icon">
         </button>
@@ -43,11 +39,51 @@
       </div>
     </header>
     <section class="fate-body" id="fateBody">
-      
-      
+      <div class="card-container" onclick="flipCard()">
+        <div class="flip-card" id="flipCard">
+          <div class="card-front">
+            <div class="title-decoration"></div>
+            <div class="emergency-title">— 艾欧泽亚F.A.T.E处理许可证 —</div>
+          </div>
+          <div class="card-back">
+            <div class="info-content">
+              <div class="avatar-section">
+                <div class="avatar" id="avatarContainer" aria-label="角色头像">
+                  <img id="avatarImage" src="" alt="角色头像" style="display: none;">
+                  <div class="avatar-placeholder">
+                    <i class="fas fa-user"></i>
+                  </div>
+                </div>
+                <input type="file" id="avatarUpload" accept="image/*" style="display: none;">
+              </div>
+              <div class="info-section">
+                <div class="main-info">
+                  <div class="info-item">
+                    <div class="info-label">持证人</div>
+                    <input type="text" class="info-input" id="cardHolderName" value="麦当劳" placeholder="请输入角色名" maxlength="10">
+                  </div>
+                  <div class="info-item">
+                    <div class="info-label">服务器</div>
+                    <input type="text" class="info-input" id="cardServerName" value="黄金谷" placeholder="请输入服务器" maxlength="10">
+                  </div>
+                  <div class="info-item">
+                    <div class="info-label">称号</div>
+                    <div class="info-value" id="cardTitle">无</div>
+                  </div>
+                  <div class="info-item">
+                    <div class="info-label">已完成目标</div>
+                    <div class="info-value" id="cardCompletionCount">0个</div>
+                  </div>
+                </div>
+                <div class="certificate-info">
+                  - 艾欧泽亚紧急事件处理协会制证 -
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-
-      <!-- 当前艾欧泽亚时间和天气显示 -->
       <div class="current-status" id="currentStatus">
         <button class="status-time-btn" id="timeDisplayBtn" title="艾欧泽亚时间">
           <span class="status-label">艾欧泽亚时间：</span>
@@ -67,7 +103,6 @@
         </button>
       </div>
 
-      <!-- FATE列表 -->
       <div class="fate-list-header">
         <div class="search-box">
           <input type="text" id="fateSearch" placeholder="搜索地图/FATE名称/目标...">
@@ -83,13 +118,11 @@
           <button class="filter-btn" id="filterBtn" title="筛选">
             <img src="./assets/icons/button/filter.webp" alt="筛选" onerror="this.style.display='none'" />
           </button>
-          <!-- 漂浮筛选框 -->
           <div id="filterDropdown" class="filter-dropdown hidden">
             <div class="filter-dropdown-content">
               <div class="filter-group">
                 <div class="filter-title">地图区域</div>
                 <div class="filter-sections">
-                  <!-- 萨纳兰地区 -->
                   <div class="filter-section">
                     <div class="section-header">
                       <button class="section-toggle active" data-section="萨纳兰">
@@ -108,8 +141,6 @@
                       <button class="chip active" data-key="map" data-value="北萨纳兰">北萨纳兰</button>
                     </div>
                   </div>
-                  
-                  <!-- 黑衣森林地区 -->
                   <div class="filter-section">
                     <div class="section-header">
                       <button class="section-toggle active" data-section="黑衣森林">
@@ -127,8 +158,6 @@
                       <button class="chip active" data-key="map" data-value="黑衣森林北部林区">黑衣森林北部林区</button>
                     </div>
                   </div>
-                  
-                  <!-- 拉诺西亚地区 -->
                   <div class="filter-section">
                     <div class="section-header">
                       <button class="section-toggle active" data-section="拉诺西亚">
@@ -148,8 +177,6 @@
                       <button class="chip active" data-key="map" data-value="拉诺西亚外地">拉诺西亚外地</button>
                     </div>
                   </div>
-                  
-                  <!-- 伊修加德地区 -->
                   <div class="filter-section">
                     <div class="section-header">
                       <button class="section-toggle active" data-section="伊修加德">
@@ -164,8 +191,6 @@
                       <button class="chip active" data-key="map" data-value="库尔札斯中央高地">库尔札斯中央高地</button>
                     </div>
                   </div>
-                  
-                  <!-- 其他地区 -->
                   <div class="filter-section">
                     <div class="section-header">
                       <button class="section-toggle active" data-section="其他">
@@ -194,7 +219,6 @@
         </div>
       </div>
       
-      <!-- 快速筛选按钮 - 只在全部FATE列表中显示 -->
       <div class="quick-filter-buttons list-view-only">
         <button class="quick-filter-btn" id="timeLimitBtn" title="限时">
           <span class="btn-text">限时</span>
@@ -225,48 +249,74 @@
     </section>
   </main>
 
-  <!-- 版权信息 -->
-  <footer class="footer">
-      <div class="footer-divider"></div>
-      <div class="footer-content">
-                      <div class="footer-info">
-                <p>&copy; 2025 McTools | 麦满分🌸黄金谷  麦当劳🌸黄金谷</p>
-                <p class="authors-line">
-                  <span class="based-text">基于 ｜</span>
-                  <span class="authors-list">
-                    <span class="author-item">苏烟Suyn</span>
-                    <span class="author-item">桑尼米尔克🌸日影地修炼所</span>
-                    <span class="author-item">初舞🌸天幕魔导城</span>
-                    <span class="author-item">静希肥肥十郎🌸天幕魔导城</span>
-                  </span>
-                  <span class="stats-text">｜ 统计数据</span>
-                </p>
-                <!-- <p>备案号：<a href="https://www.baidu.com" target="_blank">123789126891274987129</a><br></p> -->
-            </div>
-          <div class="footer-links">
-              <span></span>
-              <span></span>
-              <span></span>
-          </div>
+  <div id="avatarModal" class="avatar-modal hidden">
+    <div class="avatar-modal-content">
+      <div class="avatar-modal-header">
+        <h3>调整头像</h3>
+        <button class="avatar-modal-close" id="avatarModalClose">
+          <i class="fas fa-times"></i>
+        </button>
       </div>
+      <div class="avatar-modal-body">
+        <div class="avatar-crop-container">
+          <div class="avatar-crop-area">
+            <img id="avatarCropImage" src="" alt="调整头像">
+            <div class="avatar-crop-overlay">
+              <div class="avatar-crop-frame"></div>
+            </div>
+          </div>
+        </div>
+        <div class="avatar-controls">
+          <div class="avatar-control-group">
+            <label>缩放:</label>
+            <input type="range" id="avatarScale" min="0.01" max="2" step="0.01" value="1">
+            <span id="avatarScaleValue">100%</span>
+          </div>
+        </div>
+      </div>
+      <div class="avatar-modal-footer">
+        <button class="avatar-btn avatar-btn-cancel" id="avatarCancelBtn">取消</button>
+        <button class="avatar-btn avatar-btn-confirm" id="avatarConfirmBtn">确认</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="footer-divider"></div>
+    <div class="footer-content">
+      <div class="footer-info">
+        <p>&copy; 2025 McTools | 麦满分🌸黄金谷  麦当劳🌸黄金谷</p>
+        <p class="authors-line">
+          <span class="based-text">基于 ｜</span>
+          <span class="authors-list">
+            <span class="author-item">苏烟Suyn</span>
+            <span class="author-item">桑尼米尔克🌸日影地修炼所</span>
+            <span class="author-item">初舞🌸天幕魔导城</span>
+            <span class="author-item">静希肥肥十郎🌸天幕魔导城</span>
+          </span>
+          <span class="stats-text">｜ 统计数据</span>
+        </p>
+      </div>
+      <div class="footer-links">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </div>
   </footer>
   <script src="script.js"></script>
   <script>
-    // Service Worker 注册
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('../sw.js')
+        navigator.serviceWorker.register('./sw.js')
           .then(function(registration) {
             console.log('SW registered: ', registration);
-            
-            // 监听更新
             registration.addEventListener('updatefound', () => {
               const newWorker = registration.installing;
               if (newWorker) {
                 newWorker.addEventListener('statechange', () => {
                   if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                     console.log('New version available');
-                    // 自动跳过等待并刷新页面
                     newWorker.postMessage({ type: 'SKIP_WAITING' });
                     window.location.reload();
                   }
@@ -278,7 +328,6 @@
             console.log('SW registration failed: ', registrationError);
           });
         
-        // 监听Service Worker控制器变化
         navigator.serviceWorker.addEventListener('controllerchange', () => {
           console.log('New Service Worker activated');
           window.location.reload();

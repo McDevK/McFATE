@@ -1,25 +1,18 @@
 // McFATE Service Worker
-const CACHE_NAME = 'mcfate-v2.0.5.3'; // 固定版本号，仅手动更新
-// 仅缓存纯静态资源，避免缓存 index.html 与 script.js 导致页面回退
+const CACHE_NAME = 'mcfate-v2.0.5.5';
 const urlsToCache = [
-  './',
-  './styles.css',
-  // 不缓存 fate_data.json、index.html、script.js
-  './assets/icons/favicon/favicon.png',
-  // 删除未使用的 close.png 与 Countdown.png
+  './', './styles.css', './assets/icons/favicon/favicon.png',
   './assets/icons/button/switch.png',
   'https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
 ];
 
-// 安装事件
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(async cache => {
         console.log('McFATE Cache opened');
         try {
-          // 避免单个资源失败导致整个安装失败
           const tasks = urlsToCache.map(u => cache.add(u).catch(() => null));
           await Promise.allSettled(tasks);
         } catch (e) {
@@ -27,11 +20,9 @@ self.addEventListener('install', event => {
         }
       })
   );
-  // 让新 SW 立即进入激活阶段
   self.skipWaiting();
 });
 
-// 激活事件
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
@@ -45,36 +36,34 @@ self.addEventListener('activate', event => {
       );
     })
   );
-  // 立即接管所有客户端
   self.clients.claim();
 });
 
-// 拦截请求
 self.addEventListener('fetch', event => {
   const req = event.request;
   const url = new URL(req.url);
 
-  // 1) FATE数据文件一律网络优先
+  // FATE数据文件网络优先
   if (url.pathname.includes('fate_data.json') || url.pathname.includes('fate_common_data.json')) {
     event.respondWith(networkFirst(req));
     return;
   }
 
-  // 2) HTML 导航请求使用网络优先，确保拿到最新页面
+  // HTML导航请求网络优先
   const isHTMLRequest = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
   if (isHTMLRequest) {
     event.respondWith(networkFirst(req, 'index.html'));
     return;
   }
 
-  // 3) JS/CSS 也走网络优先，避免脚本/样式回退
+  // JS/CSS网络优先
   const dest = req.destination;
   if (dest === 'script' || dest === 'style') {
     event.respondWith(networkFirst(req));
     return;
   }
 
-  // 4) 其他静态资源：缓存优先，降低请求开销
+  // 其他静态资源缓存优先
   event.respondWith(cacheFirst(req));
 });
 
