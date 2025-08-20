@@ -592,7 +592,7 @@ body {
   flex-wrap: wrap;
 }
 
-.status-time, .status-weather, .status-completion, .status-filter-completion, .status-completion-btn, .status-filter-completion-btn {
+.status-time, .status-weather, .status-completion, .status-filter-completion, .status-completion-btn, .status-filter-completion-btn, .status-time-btn, .status-weather-btn {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -600,8 +600,8 @@ body {
   min-width: 200px;
 }
 
-/* 统计按钮样式 */
-.status-completion-btn, .status-filter-completion-btn {
+/* 所有状态按钮样式 */
+.status-completion-btn, .status-filter-completion-btn, .status-time-btn, .status-weather-btn {
   background: none;
   border: none;
   padding: 0;
@@ -611,7 +611,7 @@ body {
   padding: 4px 6px;
 }
 
-.status-completion-btn:hover, .status-filter-completion-btn:hover {
+.status-completion-btn:hover, .status-filter-completion-btn:hover, .status-time-btn:hover, .status-weather-btn:hover {
   background: var(--color-bg-light);
   transform: translateY(-1px);
 }
@@ -1060,12 +1060,52 @@ body {
   .fate-container { padding: 12px; max-width: 100%; min-width: auto; box-sizing: border-box; }
   
   .current-status {
-    flex-direction: column;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+    margin-bottom: 12px;
   }
   
-  .status-time, .status-weather {
+  .status-time, .status-weather, .status-completion, .status-filter-completion, .status-completion-btn, .status-filter-completion-btn, .status-time-btn, .status-weather-btn {
     min-width: auto;
+    text-align: left;
+  }
+
+  /* 移动端按钮样式优化 */
+  .status-completion-btn, .status-filter-completion-btn, .status-time-btn, .status-weather-btn {
+    background: var(--color-bg-light);
+    border: 1px solid var(--color-border-main);
+    border-radius: 8px;
+    padding: 8px 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .status-completion-btn:hover, .status-filter-completion-btn:hover, .status-time-btn:hover, .status-weather-btn:hover {
+    background: var(--color-bg-light);
+    border-color: var(--color-border-main);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    transform: none;
+  }
+
+  .status-completion-btn .status-label,
+  .status-filter-completion-btn .status-label,
+  .status-time-btn .status-label,
+  .status-weather-btn .status-label {
+    font-size: 11px;
+    white-space: nowrap;
+    align-self: flex-start;
+  }
+
+  .status-completion-btn .status-value,
+  .status-filter-completion-btn .status-value,
+  .status-time-btn .status-value,
+  .status-weather-btn .status-value {
+    font-size: 13px;
+    font-weight: 600;
+    align-self: flex-start;
   }
   
   .fate-header-info {

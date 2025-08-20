@@ -49,14 +49,14 @@
 
       <!-- 当前艾欧泽亚时间和天气显示 -->
       <div class="current-status" id="currentStatus">
-        <div class="status-time">
+        <button class="status-time-btn" id="timeDisplayBtn" title="艾欧泽亚时间">
           <span class="status-label">艾欧泽亚时间：</span>
           <span class="status-value" id="eorzeaTime">--:--</span>
-        </div>
-        <div class="status-weather">
+        </button>
+        <button class="status-weather-btn" id="weatherDisplayBtn" title="当前天气变化">
           <span class="status-label">当前天气变化：</span>
           <span class="status-value" id="weatherCountdown">计算中...</span>
-        </div>
+        </button>
         <button class="status-completion-btn" id="completionToggleBtn" title="点击切换统计方式">
           <span class="status-label" id="completionLabel">已完成目标：</span>
           <span class="status-value" id="completionCount">0/0</span>
@@ -106,7 +106,6 @@
                       <button class="chip active" data-key="map" data-value="东萨纳兰">东萨纳兰</button>
                       <button class="chip active" data-key="map" data-value="南萨纳兰">南萨纳兰</button>
                       <button class="chip active" data-key="map" data-value="北萨纳兰">北萨纳兰</button>
-                      <button class="chip active" data-key="map" data-value="乌尔达哈">乌尔达哈</button>
                     </div>
                   </div>
                   
@@ -126,7 +125,6 @@
                       <button class="chip active" data-key="map" data-value="黑衣森林东部林区">黑衣森林东部林区</button>
                       <button class="chip active" data-key="map" data-value="黑衣森林南部林区">黑衣森林南部林区</button>
                       <button class="chip active" data-key="map" data-value="黑衣森林北部林区">黑衣森林北部林区</button>
-                      <button class="chip active" data-key="map" data-value="格里达尼亚">格里达尼亚</button>
                     </div>
                   </div>
                   
@@ -148,7 +146,6 @@
                       <button class="chip active" data-key="map" data-value="西拉诺西亚">西拉诺西亚</button>
                       <button class="chip active" data-key="map" data-value="拉诺西亚高地">拉诺西亚高地</button>
                       <button class="chip active" data-key="map" data-value="拉诺西亚外地">拉诺西亚外地</button>
-                      <button class="chip active" data-key="map" data-value="利姆萨·罗敏萨">利姆萨·罗敏萨</button>
                     </div>
                   </div>
                   
@@ -244,6 +241,7 @@
                   </span>
                   <span class="stats-text">｜ 统计数据</span>
                 </p>
+                <!-- <p>备案号：<a href="https://www.baidu.com" target="_blank">123789126891274987129</a><br></p> -->
             </div>
           <div class="footer-links">
               <span></span>
