@@ -1,5 +1,5 @@
 // McFATE Service Worker
-const CACHE_NAME = 'mcfate-v2.0.5.2'; // 固定版本号，仅手动更新
+const CACHE_NAME = 'mcfate-v2.0.5.3'; // 固定版本号，仅手动更新
 // 仅缓存纯静态资源，避免缓存 index.html 与 script.js 导致页面回退
 const urlsToCache = [
   './',
@@ -54,8 +54,8 @@ self.addEventListener('fetch', event => {
   const req = event.request;
   const url = new URL(req.url);
 
-  // 1) fate_data.json 一律网络优先
-  if (url.pathname.includes('fate_data.json')) {
+  // 1) FATE数据文件一律网络优先
+  if (url.pathname.includes('fate_data.json') || url.pathname.includes('fate_common_data.json')) {
     event.respondWith(networkFirst(req));
     return;
   }
