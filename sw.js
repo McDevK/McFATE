@@ -1,5 +1,5 @@
 // McFATE Service Worker
-const CACHE_NAME = 'mcfate-v2.0.5.1'; // 固定版本号，仅手动更新
+const CACHE_NAME = 'mcfate-v2.0.5.2'; // 固定版本号，仅手动更新
 // 仅缓存纯静态资源，避免缓存 index.html 与 script.js 导致页面回退
 const urlsToCache = [
   './',
