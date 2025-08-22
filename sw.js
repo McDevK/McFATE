@@ -1,5 +1,5 @@
 // McFATE Service Worker
-const CACHE_NAME = 'mcfate-v2.0.5.6';
+const CACHE_NAME = 'mcfate-v2.0.5.7';
 const urlsToCache = [
   './', './styles.css', './assets/icons/favicon/favicon.png',
   './assets/icons/button/switch.png',
