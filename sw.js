@@ -1,23 +1,61 @@
-// McFATE Service Worker
-const CACHE_NAME = 'mcfate-v2.0.5.7';
+// McFATE Service Worker (优化版)
+const CACHE_NAME = 'mcfate-v2.0.5.6';
 const urlsToCache = [
-  './', './styles.css', './assets/icons/favicon/favicon.png',
-  './assets/icons/button/switch.png',
+  './', './styles.css', './script.js',
+  './assets/icons/favicon/favicon.png',
+  './assets/icons/button/FATE.png',
+  './assets/icons/button/list.png',
+  './assets/icons/button/light.png',
+  './assets/icons/button/dark.png',
+  './assets/icons/button/setting.png',
+  './assets/icons/button/hide.png',
+  './assets/icons/button/present.png',
+  './assets/icons/button/filter.webp',
   'https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
 ];
+
+// 网络优先策略
+const networkFirst = async (request, fallbackHtml) => {
+  try {
+    const response = await fetch(request);
+    if (response && response.status === 200) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, response.clone());
+      return response;
+    }
+    return await caches.match(request) || (fallbackHtml ? await caches.match(fallbackHtml) : undefined);
+  } catch {
+    return await caches.match(request) || (fallbackHtml ? await caches.match(fallbackHtml) : undefined);
+  }
+};
+
+// 缓存优先策略
+const cacheFirst = async (request) => {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+  
+  try {
+    const response = await fetch(request);
+    if (response && response.status === 200 && response.type === 'basic') {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    return new Response('Network error', { status: 503 });
+  }
+};
 
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(async cache => {
         console.log('McFATE Cache opened');
-        try {
-          const tasks = urlsToCache.map(u => cache.add(u).catch(() => null));
-          await Promise.allSettled(tasks);
-        } catch (e) {
-          // 忽略外链缓存错误
-        }
+        const promises = urlsToCache.map(url => 
+          cache.add(url).catch(() => console.warn(`Failed to cache: ${url}`))
+        );
+        await Promise.allSettled(promises);
       })
   );
   self.skipWaiting();
@@ -40,55 +78,37 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  const req = event.request;
-  const url = new URL(req.url);
+  const { request } = event;
+  const url = new URL(request.url);
 
   // FATE数据文件网络优先
   if (url.pathname.includes('fate_data.json') || url.pathname.includes('fate_common_data.json')) {
-    event.respondWith(networkFirst(req));
+    event.respondWith(networkFirst(request));
     return;
   }
 
   // HTML导航请求网络优先
-  const isHTMLRequest = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
+  const isHTMLRequest = request.mode === 'navigate' || 
+    (request.headers.get('accept') || '').includes('text/html');
   if (isHTMLRequest) {
-    event.respondWith(networkFirst(req, 'index.html'));
+    event.respondWith(networkFirst(request, 'index.html'));
     return;
   }
 
   // JS/CSS网络优先
-  const dest = req.destination;
+  const dest = request.destination;
   if (dest === 'script' || dest === 'style') {
-    event.respondWith(networkFirst(req));
+    event.respondWith(networkFirst(request));
     return;
   }
 
   // 其他静态资源缓存优先
-  event.respondWith(cacheFirst(req));
+  event.respondWith(cacheFirst(request));
 });
 
-function cacheFirst(request) {
-  return caches.match(request).then(cached => {
-    if (cached) return cached;
-    return fetch(request).then(resp => {
-      if (resp && resp.status === 200 && resp.type === 'basic') {
-        const clone = resp.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
-      }
-      return resp;
-    });
-  });
-}
-
-function networkFirst(request, fallbackHtml) {
-  return fetch(request)
-    .then(resp => {
-      if (resp && resp.status === 200) {
-        const clone = resp.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
-        return resp;
-      }
-      return caches.match(request) || (fallbackHtml ? caches.match(fallbackHtml) : undefined);
-    })
-    .catch(() => caches.match(request) || (fallbackHtml ? caches.match(fallbackHtml) : undefined));
-}
+// 消息处理
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});

@@ -1,4 +1,4 @@
-/* McFATE FATE计时器样式 */
+/* McFATE FATE计时器样式 (优化版) */
 :root {
   --color-bg-main: #F5F2E9;
   --color-bg-dark: #FEFBF6;
@@ -45,11 +45,40 @@ body {
   min-height: 100vh; display: flex; flex-direction: column;
 }
 
-.fate-container { max-width: 720px; min-width: 720px; margin: 0 auto; padding: 16px; flex: 1 1 auto; display:flex; flex-direction: column; box-sizing: border-box; }
+.fate-container { 
+  max-width: 720px; min-width: 720px; margin: 0 auto; padding: 16px; 
+  flex: 1 1 auto; display: flex; flex-direction: column; box-sizing: border-box; 
+}
 
-/* 列表视图时的容器宽度优化 */
-.fate-container.list-view {
-  max-width: 720px;
+.fate-container.list-view { max-width: 720px; }
+
+/* 桌面端主容器优化 */
+@media (min-width: 992px) {
+  .fate-container {
+    max-width: calc(50vw - 180px);
+    min-width: 600px;
+    margin: 0 auto;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  
+  .fate-container.list-view { max-width: calc(50vw - 180px); }
+  
+  @media (max-width: 1200px) {
+    .fate-container, .fate-container.list-view { max-width: calc(50vw - 170px); }
+  }
+  
+  @media (max-width: 1100px) {
+    .fate-container, .fate-container.list-view { max-width: calc(50vw - 160px); }
+  }
+  
+  @media (max-width: 1000px) {
+    .fate-container, .fate-container.list-view { max-width: calc(50vw - 150px); }
+  }
+  
+  @media (max-width: 900px) {
+    .fate-container, .fate-container.list-view { max-width: calc(50vw - 140px); }
+  }
 }
 
 /* 隐藏已完成时：让容器按内容高度收缩，避免出现大空白 */
@@ -57,285 +86,164 @@ body {
 .fate-container.shrink-list .fate-list { flex: 0 0 auto; }
 
 .fate-header { 
-  display:flex; align-items:center; justify-content:space-between; 
+  display: flex; align-items: center; justify-content: space-between; 
   padding: 10px 0; margin-bottom: 16px;
 }
 
 .fate-title { 
-  display: flex; 
-  align-items: center; 
-  gap: 12px; 
-  font-size: 20px; 
-  font-weight: 600; 
-  color: var(--color-secondary); 
+  display: flex; align-items: center; gap: 12px; 
+  font-size: 20px; font-weight: 600; color: var(--color-secondary); 
 }
 
 .home-link {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--color-bg-light);
-  color: var(--color-secondary);
-  text-decoration: none;
-  transition: all 0.3s ease;
-  border: 2px solid var(--color-secondary);
-  margin-right: 8px;
-  /* 确保在所有设备上都显示为正圆形 */
-  min-width: 32px;
-  min-height: 32px;
-  max-width: 32px;
-  max-height: 32px;
-  box-sizing: border-box;
-  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--color-bg-light); color: var(--color-secondary);
+  text-decoration: none; transition: all 0.3s ease;
+  border: 2px solid var(--color-secondary); margin-right: 8px;
+  min-width: 32px; min-height: 32px; max-width: 32px; max-height: 32px;
+  box-sizing: border-box; flex-shrink: 0;
 }
 
-/* 返回按钮图标 */
 .home-link .back-icon {
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
-  filter: var(--icon-filter, none);
+  width: 18px; height: 18px; object-fit: contain; filter: var(--icon-filter, none);
 }
 
 .home-link:hover {
-  background: var(--color-secondary);
-  color: var(--color-bg-main);
-  transform: scale(1.1);
+  background: var(--color-secondary); color: var(--color-bg-main); transform: scale(1.1);
 }
 
-.home-link i {
-  font-size: 14px;
-}
+.home-link i { font-size: 14px; }
+
 .fate-title .fate-logo { 
-  width: 24px; 
-  height: 24px; 
-  object-fit: contain; 
-  display: inline-block; 
+  width: 24px; height: 24px; object-fit: contain; display: inline-block; 
 }
 
-.fate-actions { 
-  display:inline-flex; align-items:center; gap:8px; 
-}
+.fate-actions { display: inline-flex; align-items: center; gap: 8px; }
 
-/* 时间显示框 */
 .local-time-box {
-  display: inline-flex;
-  flex-direction: column;
-  gap: 2px;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--color-border-main);
-  border-radius: 10px;
-  padding: 6px 10px;
-  background: var(--color-bg-light);
+  display: inline-flex; flex-direction: column; gap: 2px;
+  align-items: center; justify-content: center;
+  border: 2px solid var(--color-border-main); border-radius: 10px;
+  padding: 6px 10px; background: var(--color-bg-light);
 }
 
 .time-row {
-  display: inline-flex;
-  align-items: center;
-  line-height: 1;
+  display: inline-flex; align-items: center; line-height: 1;
 }
 
 .time-row .time-label {
-  font-size: 12px;
-  font-weight: 700;
-  margin-right: 6px;
-  color: var(--color-secondary);
+  font-size: 12px; font-weight: 700; margin-right: 6px; color: var(--color-secondary);
 }
 
 .time-row .time-value {
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  color: var(--color-text-main);
-  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 14px; font-weight: 700; letter-spacing: 0.5px;
+  color: var(--color-text-main); font-family: 'Noto Sans SC', sans-serif;
 }
 
 .fate-btn { 
-  display: inline-flex; 
-  align-items: center; 
-  justify-content: center; 
-  color: var(--color-secondary); 
-  background: transparent; 
-  border: 2px solid var(--color-secondary); 
-  border-radius: 50%; 
-  width: 40px; 
-  height: 40px; 
-  cursor: pointer; 
-  position: relative; 
-  overflow: hidden; 
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+  display: inline-flex; align-items: center; justify-content: center; 
+  color: var(--color-secondary); background: transparent; 
+  border: 2px solid var(--color-secondary); border-radius: 50%; 
+  width: 40px; height: 40px; cursor: pointer; position: relative; 
+  overflow: hidden; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
   font-size: 16px;
 }
 
 .fate-btn.active { 
-  background: var(--color-secondary); 
-  color: var(--color-bg-main); 
+  background: var(--color-secondary); color: var(--color-bg-main); 
   border-color: var(--color-secondary); 
   box-shadow: 0 4px 16px rgba(201, 168, 106, 0.3); 
   transform: scale(1.05) rotate(15deg); 
 }
 
 .fate-btn:hover {
-  background: var(--color-secondary);
-  color: var(--color-bg-main);
+  background: var(--color-secondary); color: var(--color-bg-main);
   transform: scale(1.05) rotate(15deg);
   box-shadow: 0 4px 16px rgba(201, 168, 106, 0.3);
 }
 
-.fate-btn.active:hover {
-  background: var(--color-secondary);
-}
+.fate-btn.active:hover { background: var(--color-secondary); }
 
-.fate-btn:active {
-  transform: scale(0.95) rotate(-15deg);
-}
+.fate-btn:active { transform: scale(0.95) rotate(-15deg); }
 
-/* 列表按钮图标样式 */
 .fate-btn .list-icon {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-  filter: var(--icon-filter, none);
-  /* 确保图标不受按钮旋转影响 */
-  transform: none;
-  transition: none;
+  width: 20px; height: 20px; object-fit: contain; filter: var(--icon-filter, none);
+  transform: none; transition: none;
 }
 
-/* 深色主题下的图标滤镜 */
-[data-theme="dark"] .fate-btn .list-icon {
-  filter: brightness(0) invert(1);
-}
+[data-theme="dark"] .fate-btn .list-icon { filter: brightness(0) invert(1); }
 
-/* 列表按钮特殊样式 - 禁用旋转效果 */
 .fate-btn.fate-list-toggle:hover .list-icon,
 .fate-btn.fate-list-toggle:active .list-icon,
-.fate-btn.fate-list-toggle.active .list-icon {
-  transform: none !important;
+.fate-btn.fate-list-toggle.active .list-icon { transform: none !important; }
+
+.fate-btn.fate-list-toggle:hover { transform: scale(1.05); }
+
+.fate-btn.fate-list-toggle:active { transform: scale(0.95); }
+
+.fate-btn.fate-list-toggle.active { transform: scale(1.05); }
+
+.fate-body { 
+  background: rgba(0,0,0,0.2); border: 1px solid var(--color-border-main); 
+  border-radius: 12px; padding: 12px; flex: 1 1 auto; 
+  display: flex; flex-direction: column; overflow: visible; box-sizing: border-box; 
 }
 
-/* 列表按钮悬停和激活状态 - 只缩放不旋转 */
-.fate-btn.fate-list-toggle:hover {
-  transform: scale(1.05);
-}
-
-.fate-btn.fate-list-toggle:active {
-  transform: scale(0.95);
-}
-
-.fate-btn.fate-list-toggle.active {
-  transform: scale(1.05);
-}
-
-.fate-body { background: rgba(0,0,0,0.2); border: 1px solid var(--color-border-main); border-radius: 12px; padding: 12px; flex: 1 1 auto; display:flex; flex-direction: column; overflow: visible; box-sizing: border-box; }
-
-/* 桌面端：证件栏和状态栏的布局容器 */
-.fate-body::before {
-  content: '';
-  display: block;
-  clear: both;
-}
-
-.fate-body::after {
-  content: '';
-  display: block;
-  clear: both;
+.fate-body::before, .fate-body::after {
+  content: ''; display: block; clear: both;
 }
 
 /* 大屏幕：证件栏和状态栏在同一行 */
 @media (min-width: 1200px) {
-  .fate-body {
-    position: relative;
-  }
+  .fate-body { position: relative; }
   
   .card-container {
-    position: absolute;
-    left: 12px;
-    top: 12px;
-    float: none;
-    display: block !important;
+    position: absolute; left: 12px; top: 12px; float: none; display: block !important;
   }
   
   .current-status {
-    position: absolute;
-    right: 12px;
-    top: 12px;
-    float: none;
-    max-width: 420px !important;
-    width: 420px !important;
+    position: absolute; right: 12px; top: 12px; float: none;
+    max-width: 420px !important; width: 420px !important;
   }
   
-  /* 为FATE列表预留空间 */
-  .fate-list-header {
-    margin-top: 140px;
-  }
+  .fate-list-header { margin-top: 140px; }
 }
 
 /* 中等屏幕：隐藏证件栏，状态栏自适应宽度 */
 @media (min-width: 769px) and (max-width: 1199px) {
-  .fate-body {
-    position: relative;
-  }
+  .fate-body { position: relative; }
   
-  .card-container {
-    display: none !important;
-  }
+  .card-container { display: none !important; }
   
   .current-status {
-    position: static !important;
-    float: none !important;
-    max-width: none !important;
-    width: 100% !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    /* 参考web版本的单行显示 */
-    display: flex !important;
-    gap: 16px !important;
-    padding: 12px !important;
-    background: var(--color-bg-dark) !important;
-    border: 1px solid var(--color-border-main) !important;
-    border-radius: 8px !important;
-    margin-bottom: 16px !important;
-    flex-wrap: nowrap !important;
-    box-sizing: border-box !important;
+    position: static !important; float: none !important; max-width: none !important;
+    width: 100% !important; margin-left: 0 !important; margin-right: 0 !important;
+    display: flex !important; gap: 16px !important; padding: 12px !important;
+    background: var(--color-bg-dark) !important; border: 1px solid var(--color-border-main) !important;
+    border-radius: 8px !important; margin-bottom: 16px !important;
+    flex-wrap: nowrap !important; box-sizing: border-box !important;
   }
   
-  /* 中等屏幕：状态按钮样式 */
   .current-status .status-time-btn,
   .current-status .status-weather-btn,
   .current-status .status-completion-btn,
   .current-status .status-filter-completion-btn {
-    display: flex !important;
-    align-items: center !important;
-    gap: 6px !important;
-    flex: 1 !important;
-    min-width: 0 !important;
-    background: none !important;
-    border: none !important;
-    padding: 0 !important;
-    cursor: pointer !important;
-    transition: all 0.2s ease !important;
-    border-radius: 4px !important;
-    padding: 4px 6px !important;
+    display: flex !important; align-items: center !important; gap: 6px !important;
+    flex: 1 !important; min-width: 0 !important; background: none !important;
+    border: none !important; padding: 4px 6px !important; cursor: pointer !important;
+    transition: all 0.2s ease !important; border-radius: 4px !important;
   }
   
   .current-status .status-time-btn:hover,
   .current-status .status-weather-btn:hover,
   .current-status .status-completion-btn:hover,
   .current-status .status-filter-completion-btn:hover {
-    background: var(--color-bg-light) !important;
-    border-color: var(--color-border-main) !important;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.15) !important;
-    transform: none !important;
+    background: var(--color-bg-light) !important; border-color: var(--color-border-main) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15) !important; transform: none !important;
   }
   
-  /* 重置FATE列表头部间距 */
-  .fate-list-header {
-    margin-top: 0 !important;
-  }
+  .fate-list-header { margin-top: 0 !important; }
 }
 
 /* 筛选容器 */
@@ -362,6 +270,133 @@ body {
   overflow: hidden;
   max-height: 70vh;
   overflow-y: auto;
+}
+
+/* 桌面端筛选窗口优化 */
+@media (min-width: 992px) {
+  .filter-dropdown { 
+    position: fixed; 
+    top: 350px; /* 再往下调整一些 */
+    right: 20px; 
+    margin-top: 0; 
+    width: 280px; /* 变短一些 */
+    max-width: 280px; /* 限制最大宽度 */
+    z-index: 1001;
+    /* 添加平滑动画 */
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  
+  /* 在较窄的屏幕上调整大小 */
+  @media (max-width: 1200px) {
+    .filter-dropdown {
+      width: 260px;
+      max-width: 260px;
+    }
+  }
+  
+  /* 在更窄的屏幕上进一步调整 */
+  @media (max-width: 1100px) {
+    .filter-dropdown {
+      width: 240px;
+      max-width: 240px;
+    }
+  }
+  
+  /* 在更窄的屏幕上调整 */
+  @media (max-width: 1000px) {
+    .filter-dropdown {
+      width: 220px;
+      max-width: 220px;
+    }
+  }
+  
+  /* 在更窄的屏幕上调整 */
+  @media (max-width: 900px) {
+    .filter-dropdown {
+      width: 200px;
+      max-width: 200px;
+    }
+  }
+  
+  .filter-dropdown.hidden {
+    opacity: 0;
+    transform: translateY(-10px);
+    pointer-events: none;
+  }
+  
+  .filter-dropdown:not(.hidden) {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  .filter-dropdown-content { 
+    max-height: calc(100vh - 450px); /* 调整高度限制，适应新的位置 */
+    overflow-y: auto; /* 恢复滚动功能 */
+    /* 增强阴影效果 */
+    box-shadow: 0 12px 32px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.2);
+    /* 隐藏滚动条样式 */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+  
+  /* Webkit浏览器隐藏滚动条（仅桌面端） */
+  .filter-dropdown-content::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* 确保移动端保持原有滚动条样式 */
+  @media (max-width: 991px) {
+    .filter-dropdown-content::-webkit-scrollbar {
+      display: block;
+      width: 8px;
+    }
+    
+    .filter-dropdown-content::-webkit-scrollbar-track {
+      background: var(--color-bg-light);
+      border-radius: 4px;
+    }
+    
+    .filter-dropdown-content::-webkit-scrollbar-thumb {
+      background: var(--color-border-main);
+      border-radius: 4px;
+    }
+    
+    .filter-dropdown-content::-webkit-scrollbar-thumb:hover {
+      background: var(--color-secondary);
+    }
+  }
+  
+  /* 确保筛选内容完整显示 */
+  .filter-dropdown-content .filter-group {
+    padding: 20px;
+  }
+  
+  .filter-dropdown-content .filter-sections {
+    gap: 12px;
+  }
+  
+  .filter-dropdown-content .section-content {
+    padding: 16px;
+    gap: 10px;
+  }
+  
+  /* 桌面端筛选按钮激活状态增强 */
+  .filter-btn.active {
+    background: var(--color-secondary);
+    color: var(--color-bg-main);
+    border-color: var(--color-secondary);
+    box-shadow: 0 6px 20px rgba(201, 168, 106, 0.4);
+    transform: scale(1.1); /* 移除旋转效果，只保留缩放 */
+  }
+  
+  /* 筛选按钮特殊样式 - 禁用旋转效果 */
+  .filter-btn:hover {
+    transform: scale(1.05); /* 只缩放不旋转 */
+  }
+  
+  .filter-btn:active {
+    transform: scale(0.95); /* 只缩放不旋转 */
+  }
 }
 .filter-group { 
   padding: 16px; 
@@ -593,18 +628,19 @@ body {
   height: 32px; 
   border: none; 
   border-radius: 8px; 
-  background: transparent; 
+  background: var(--color-bg-light); 
   display: inline-flex; 
   align-items: center; 
   justify-content: center; 
   cursor: pointer; 
   transition: transform .12s ease; 
-  color: var(--color-secondary); 
+  color: var(--color-text-main); 
   flex-shrink: 0; /* 防止按钮被压缩 */
 }
 .filter-btn:hover { 
   transform: translateY(-1px) scale(1.04); 
-  background: var(--color-bg-light);
+  background: var(--color-secondary);
+  color: var(--color-bg-main);
 }
 .filter-btn img { 
   width: 16px; 
