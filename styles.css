@@ -2088,7 +2088,7 @@ body {
   object-fit: contain;
   margin-right: 4px;
   vertical-align: middle;
-  padding-bottom: 2px;
+  padding-bottom: 0px;
   /* 移除滤镜，让图标保持原始颜色 */
 }
 
