@@ -153,15 +153,16 @@
     
     // 天气组合映射
     const weatherCombinations = {
-      '雨天': ['小雨', '雷雨', '暴雨'],
+      '下雨': ['小雨', '雷雨', '暴雨'],
       '晴天': ['碧空', '晴朗']
     };
     
-    // 处理天气组合
+    // 处理天气组合（只有当包含多个相关天气时才显示为组合）
     for (const [groupName, weathers] of Object.entries(weatherCombinations)) {
       const matchedWeathers = weathers.filter(w => processedText.includes(w));
-      if (matchedWeathers.length > 0) {
-        const weatherClass = groupName === '雨天' ? 'rainy' : 'sunny';
+      // 只有当匹配到多个天气时才显示为组合
+      if (matchedWeathers.length > 1) {
+        const weatherClass = groupName === '下雨' ? 'rainy' : 'sunny';
         const icons = matchedWeathers.map(w => `<img src="assets/icons/weather/${w}.png" alt="${w}" class="weather-icon" onerror="this.style.display='none'">`).join('');
         result += `<span class="weather-tag ${weatherClass}">${groupName} <span class="weather-icons">${icons}</span></span>`;
         
@@ -227,7 +228,7 @@
     // 再处理天气标签
     // 天气组合映射
     const weatherCombinations = {
-      '雨天': ['小雨', '雷雨', '暴雨'],
+      '下雨': ['小雨', '雷雨', '暴雨'],
       '晴天': ['碧空', '晴朗']
     };
     
@@ -277,7 +278,7 @@
       // 晴天类
       '碧空': 'sunny',
       '晴朗': 'sunny',
-      // 雨天类
+      // 雨天类（单个天气）
       '小雨': 'rainy',
       '暴雨': 'rainy',
       // 雪天类
