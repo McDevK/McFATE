@@ -201,17 +201,18 @@
     
     // 定义符文关键词和对应的CSS类
     const runeKeywords = [
-      { keyword: '致命符文', class: 'fatal', display: '致命' },
-      { keyword: '灼烧符文', class: 'burning', display: '灼烧' },
-      { keyword: '神勇符文', class: 'valiant', display: '神勇' }
+      { keyword: '致命符文', class: 'fatal', display: '致命', icon: './assets/icons/img/fatal.png' },
+      { keyword: '灼烧符文', class: 'burning', display: '灼烧', icon: './assets/icons/img/fever.png' },
+      { keyword: '神勇符文', class: 'valiant', display: '神勇', icon: './assets/icons/img/power.png' }
     ];
     
     let processedText = text;
     
     // 为每个符文关键词创建标签
-    runeKeywords.forEach(({ keyword, class: className, display }) => {
+    runeKeywords.forEach(({ keyword, class: className, display, icon }) => {
       const regex = new RegExp(keyword, 'g');
-      const tag = `<span class="rune-tag ${className}">${display}</span>符文`;
+      const iconHtml = icon ? `<img src="${icon}" alt="${display}" class="rune-icon" onerror="this.style.display='none'">` : '';
+      const tag = `<span class="rune-tag ${className}">${iconHtml}${display}</span>符文`;
       processedText = processedText.replace(regex, tag);
     });
     
