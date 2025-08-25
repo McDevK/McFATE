@@ -144,6 +144,201 @@
     return true;
   };
 
+  // 天气标签处理函数
+  const processWeatherTags = (weatherText) => {
+    if (!weatherText) return weatherText;
+    
+    let processedText = weatherText;
+    let result = '';
+    
+    // 天气组合映射
+    const weatherCombinations = {
+      '雨天': ['小雨', '雷雨', '暴雨'],
+      '晴天': ['碧空', '晴朗']
+    };
+    
+    // 处理天气组合
+    for (const [groupName, weathers] of Object.entries(weatherCombinations)) {
+      const matchedWeathers = weathers.filter(w => processedText.includes(w));
+      if (matchedWeathers.length > 0) {
+        const weatherClass = groupName === '雨天' ? 'rainy' : 'sunny';
+        const icons = matchedWeathers.map(w => `<img src="assets/icons/weather/${w}.png" alt="${w}" class="weather-icon" onerror="this.style.display='none'">`).join('');
+        result += `<span class="weather-tag ${weatherClass}">${groupName} <span class="weather-icons">${icons}</span></span>`;
+        
+        // 从原文本中移除已处理的天气
+        matchedWeathers.forEach(w => {
+          processedText = processedText.replace(new RegExp(w, 'g'), '');
+        });
+      }
+    }
+    
+    // 处理剩余的单个天气
+    Object.keys(WEATHER_NAMES_CN).forEach(enKey => {
+      const cnName = WEATHER_NAMES_CN[enKey];
+      if (processedText.includes(cnName)) {
+        const weatherClass = getWeatherTypeClass(cnName);
+        const icon = `<img src="assets/icons/weather/${cnName}.png" alt="${cnName}" class="weather-icon" onerror="this.style.display='none'">`;
+        result += `<span class="weather-tag ${weatherClass}">${cnName} ${icon}</span>`;
+        processedText = processedText.replace(new RegExp(cnName, 'g'), '');
+      }
+    });
+    
+    // 清理多余的分隔符和空格
+    processedText = processedText.replace(/[|&，、\s]+/g, '').trim();
+    
+    // 如果还有剩余文本，直接添加
+    if (processedText) {
+      result += processedText;
+    }
+    
+    return result || weatherText;
+  };
+
+  // 符文标签处理函数
+  const processRuneTags = (text) => {
+    if (!text) return text;
+    
+    // 定义符文关键词和对应的CSS类
+    const runeKeywords = [
+      { keyword: '致命符文', class: 'fatal', display: '致命' },
+      { keyword: '灼烧符文', class: 'burning', display: '灼烧' },
+      { keyword: '神勇符文', class: 'valiant', display: '神勇' }
+    ];
+    
+    let processedText = text;
+    
+    // 为每个符文关键词创建标签
+    runeKeywords.forEach(({ keyword, class: className, display }) => {
+      const regex = new RegExp(keyword, 'g');
+      const tag = `<span class="rune-tag ${className}">${display}</span>符文`;
+      processedText = processedText.replace(regex, tag);
+    });
+    
+    return processedText;
+  };
+
+  // 目标文本处理函数（处理符文和天气标签）
+  const processGoalText = (text) => {
+    if (!text) return text;
+    
+    // 先处理符文标签
+    let processedText = processRuneTags(text);
+    
+    // 再处理天气标签
+    // 天气组合映射
+    const weatherCombinations = {
+      '雨天': ['小雨', '雷雨', '暴雨'],
+      '晴天': ['碧空', '晴朗']
+    };
+    
+    // 处理天气组合
+    for (const [groupName, weathers] of Object.entries(weatherCombinations)) {
+      const matchedWeathers = weathers.filter(w => processedText.includes(w));
+      if (matchedWeathers.length > 0) {
+        const icons = matchedWeathers.map(w => `<img src="./assets/icons/weather/${w}.png" alt="${w}" class="weather-icon">`).join('');
+        const tag = `<span class="weather-tag">${groupName} <span class="weather-icons">${icons}</span></span>`;
+        
+        // 替换所有匹配的天气为组合标签
+        matchedWeathers.forEach(w => {
+          processedText = processedText.replace(new RegExp(w, 'g'), '');
+        });
+        
+        // 清理多余的分隔符和空格
+        processedText = processedText.replace(/[|&，、\s]+/g, '').trim();
+        
+        // 添加组合标签
+        processedText = processedText.replace(/(.*)/, `$1 ${tag}`);
+      }
+    }
+    
+    // 处理单个天气（包括"天气"后缀的情况）
+    Object.keys(WEATHER_NAMES_CN).forEach(enKey => {
+      const cnName = WEATHER_NAMES_CN[enKey];
+      if (processedText.includes(cnName)) {
+        const icon = `<img src="./assets/icons/weather/${cnName}.png" alt="${cnName}" class="weather-icon">`;
+        const tag = `<span class="weather-tag">${cnName} ${icon}</span>`;
+        
+        // 处理"天气"后缀的情况，如"热浪天气"
+        const weatherPattern = new RegExp(`${cnName}天气`, 'g');
+        if (processedText.match(weatherPattern)) {
+          processedText = processedText.replace(weatherPattern, `${tag}天气`);
+        } else {
+          processedText = processedText.replace(new RegExp(cnName, 'g'), tag);
+        }
+      }
+    });
+    
+    return processedText;
+  };
+
+  // 获取天气类型CSS类
+  const getWeatherTypeClass = (weatherName) => {
+    const weatherTypes = {
+      // 晴天类
+      '碧空': 'sunny',
+      '晴朗': 'sunny',
+      // 雨天类
+      '小雨': 'rainy',
+      '暴雨': 'rainy',
+      // 雪天类
+      '小雪': 'snowy',
+      '暴雪': 'snowy',
+      // 雷雨类
+      '打雷': 'thunder',
+      '雷雨': 'thunder',
+      // 雾天类
+      '薄雾': 'foggy',
+      '妖雾': 'foggy',
+      // 热浪类
+      '热浪': 'heatwave',
+      // 风类
+      '微风': 'windy',
+      '强风': 'windy',
+      // 沙尘类
+      '扬沙': 'dusty'
+    };
+    return weatherTypes[weatherName] || 'rainy'; // 默认使用蓝色
+  };
+
+  // 简化的目标文本处理函数（处理符文、天气和时间标签）
+  const processGoalTextSimple = (text) => {
+    if (!text) return text;
+    
+    // 先处理符文标签
+    let processedText = processRuneTags(text);
+    
+    // 处理单个天气（包括"天气"后缀的情况）
+    Object.keys(WEATHER_NAMES_CN).forEach(enKey => {
+      const cnName = WEATHER_NAMES_CN[enKey];
+      if (processedText.includes(cnName)) {
+        const weatherClass = getWeatherTypeClass(cnName);
+        const icon = `<img src="assets/icons/weather/${cnName}.png" alt="${cnName}" class="weather-icon" onerror="this.style.display='none'">`;
+        const tag = `<span class="weather-tag ${weatherClass}">${cnName} ${icon}</span>`;
+        
+        // 处理"天气"后缀的情况，如"热浪天气"
+        const weatherPattern = new RegExp(`${cnName}天气`, 'g');
+        if (processedText.match(weatherPattern)) {
+          processedText = processedText.replace(weatherPattern, `${tag}天气`);
+        } else {
+          processedText = processedText.replace(new RegExp(cnName, 'g'), tag);
+        }
+      }
+    });
+    
+    // 处理时间标签
+    if (processedText.includes('白天')) {
+      const dayTag = `<span class="time-tag day" data-tooltip="ET 6:00-18:00">白天</span>`;
+      processedText = processedText.replace(/白天/g, dayTag);
+    }
+    
+    if (processedText.includes('夜晚')) {
+      const nightTag = `<span class="time-tag night" data-tooltip="ET 18:00-6:00">夜晚</span>`;
+      processedText = processedText.replace(/夜晚/g, nightTag);
+    }
+    
+    return processedText;
+  };
+
   const exportLocalData = () => {
     const data = {};
     EXPORT_KEYS.forEach(k => {
@@ -237,7 +432,7 @@
     pop.className = 'goal-popover';
     const goalsText = String(fate.危命目标 || '').trim();
     const lines = goalsText ? goalsText.split(/\n+/).map(s => s.replace(/^\d+\./, '').trim()).filter(Boolean) : [];
-    const listHtml = lines.length ? lines.map(l => `<li>${escapeHtml(l)}</li>`).join('') : '<li>No target requirements</li>';
+    const listHtml = lines.length ? lines.map(l => `<li>${processGoalTextSimple(escapeHtml(l))}</li>`).join('') : '<li>No target requirements</li>';
     pop.innerHTML = `<div class="gp-title">${escapeHtml(fate.名称)} · 危命目标</div><ul class="gp-list">${listHtml}</ul>`;
     document.body.appendChild(pop);
     
@@ -1399,9 +1594,8 @@
 
         const leftLines = [];
         if (appearWeather) {
-          const show = normalizeWeatherLabel(appearWeather);
-          const tag = `<span class="tag tag-weather">${show}</span>`;
-          leftLines.push(`<div class="goal-line"><span class="goal-label">出现天气</span><span class="goal-value">${tag}</span></div>`);
+          const weatherTag = processWeatherTags(appearWeather);
+          leftLines.push(`<div class="goal-line"><span class="goal-label">出现天气</span><span class="goal-value">${weatherTag}</span></div>`);
         }
         if (appearStart || appearEnd) {
           // 展示原始区间（兼容单列写法）
@@ -1413,15 +1607,15 @@
           leftLines.push(`<div class=\"goal-line\"><span class=\"goal-label\">出现时间</span><span class=\"goal-value\"><span class=\"tag tag-time\">${timeLabel}</span></span></div>`);
         }
         // 目标标签：天气 与 白天/夜晚；若同时存在，用"{天气}的{时间}"
-        const goalWeather = normalizeWeatherLabel(g.weatherReq || '');
+        const goalWeather = processWeatherTags(g.weatherReq || '');
         const goalTime = String(g.timeReq || '');
-        const timeTag = /白天/.test(goalTime) ? '<span class="tag tag-day">白天</span>' : (/夜晚/.test(goalTime) ? '<span class="tag tag-night">夜晚</span>' : '');
+        const timeTag = /白天/.test(goalTime) ? '<span class="time-tag day" data-tooltip="ET 6:00-18:00">白天</span>' : (/夜晚/.test(goalTime) ? '<span class="time-tag night" data-tooltip="ET 18:00-6:00">夜晚</span>' : '');
         let goalVal = '';
         if (goalWeather && timeTag) {
-          goalVal = `<span class="tag tag-weather">${goalWeather}</span>${timeTag}`;
+          goalVal = `${goalWeather}${timeTag}`;
         } else {
           const pieces = [];
-          if (goalWeather) pieces.push(`<span class="tag tag-weather">${goalWeather}</span>`);
+          if (goalWeather) pieces.push(goalWeather);
           if (timeTag) pieces.push(timeTag);
           goalVal = pieces.join('');
         }
@@ -1874,7 +2068,8 @@
       
       const goalsHtml = goals.map(goal => {
         const goalClass = goal.completed ? 'goal-item completed' : 'goal-item';
-        const goalText = goal.completed ? `<span class="goal-text-strikethrough">${goal.text}</span>` : goal.text;
+        const processedText = processGoalTextSimple(goal.text);
+        const goalText = goal.completed ? `<span class="goal-text-strikethrough">${processedText}</span>` : processedText;
         
         return `
           <div class="${goalClass}" data-goal-key="${goal.key}">
