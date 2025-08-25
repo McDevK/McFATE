@@ -1,5 +1,5 @@
 // McFATE Service Worker (优化版)
-const CACHE_NAME = 'mcfate-v2.0.5.7';
+const CACHE_NAME = 'mcfate-v2.0.5.8';
 const urlsToCache = [
   './', './styles.css', './script.js',
   './assets/icons/favicon/favicon.png',
@@ -11,6 +11,15 @@ const urlsToCache = [
   './assets/icons/button/hide.png',
   './assets/icons/button/present.png',
   './assets/icons/button/filter.webp',
+  './assets/icons/img/fatal.png',
+  './assets/icons/img/fever.png',
+  './assets/icons/img/power.png',
+  './assets/icons/img/weather/sunny.png',
+  './assets/icons/img/weather/rainy.png',
+  './assets/icons/img/weather/cloudy.png',
+  './assets/icons/img/weather/snowy.png',
+  './assets/icons/img/weather/windy.png',
+  './assets/icons/img/weather/foggy.png',
   'https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
 ];
