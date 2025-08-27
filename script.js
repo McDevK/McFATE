@@ -386,6 +386,11 @@
         updateFilterChips();
         renderFateList();
         
+        // 导入后检查完成状态并添加星星效果
+        setTimeout(() => {
+          updateCardCompletionCount();
+        }, 100);
+        
         console.log(`成功导入 ${importedCount} 个配置项`);
         alert('数据已导入，页面已刷新');
       } catch (e) {
@@ -461,6 +466,11 @@
     setupPeriodicUpdates();
     updateCurrentStatus();
     initCardInputs();
+    
+    // 初始化时检查完成状态并添加星星效果
+    setTimeout(() => {
+      updateCardCompletionCount();
+    }, 100);
   };
 
   // 加载用户偏好设置 (优化版)
@@ -543,6 +553,7 @@
       console.warn('保存已完成目标失败:', e);
     }
     updateCompletionCount();
+    updateCardCompletionCount(); // 更新卡片完成状态和星星效果
   };
 
   const persistQuickFilters = () => {
@@ -671,11 +682,11 @@
           state.quickFilters[key] = !state.quickFilters[key];
           btn.classList.toggle('active', state.quickFilters[key]);
           resetOtherQuickFilters(key);
-          persistQuickFilters();
-          updateFilterCompletionCount();
-          renderFateList();
-        });
-      }
+        persistQuickFilters();
+        updateFilterCompletionCount();
+        renderFateList();
+      });
+    }
     });
 
     // 统计显示模式切换按钮
@@ -883,7 +894,7 @@
     if (requirement.includes('&')) {
       return { active: false, msLeft: 0, text: '多目标（按次完成）' };
     }
-    
+
     const allowWeathers = requirement.split('|').map(w => WEATHER_NAMES_EN[w.trim()]).filter(Boolean);
     const isActive = allowWeathers.includes(currentWeather.name);
     
@@ -1833,6 +1844,24 @@
     renderFateList();
   };
 
+  const toggleAllMapsSelection = () => {
+    // 获取所有地图名称
+    const allMaps = Object.values(regionGroups).flat();
+    
+    // 检查是否所有地图都被选中
+    const allSelected = allMaps.every(map => filterState.maps[map]);
+    
+    // 切换所有地图的选中状态
+    allMaps.forEach(map => {
+      filterState.maps[map] = !allSelected;
+    });
+    
+    updateFilterChips();
+    saveFilterState();
+    updateFilterCompletionCount();
+    renderFateList();
+  };
+
   const initFilter = () => {
     const filterBtn = document.getElementById('filterBtn');
     const filterDropdown = document.getElementById('filterDropdown');
@@ -1917,6 +1946,14 @@
         toggleRegionSelection(btn.dataset.section);
       });
     });
+
+    // 添加全选所有地图按钮的事件监听
+    const allMapsToggle = document.getElementById('allMapsToggle');
+    if (allMapsToggle) {
+      allMapsToggle.addEventListener('click', () => {
+        toggleAllMapsSelection();
+      });
+    }
     
     window.addEventListener('resize', () => {
       const isDesktop = window.innerWidth >= 992;
@@ -2178,6 +2215,7 @@
 
   const updateCardCompletionCount = () => {
     const cardCompletionCount = document.getElementById('cardCompletionCount');
+    const cardBack = document.querySelector('.card-back');
     if (!cardCompletionCount || !state.allFateData) return;
     
     if (state.completionDisplayMode) {
@@ -2196,6 +2234,25 @@
       
       cardCompletionCount.textContent = `${completedGoals}/${totalGoals}`;
       updateCardTitle(completedGoals);
+      
+      // 检查是否达到1264/1264，添加星星效果
+      if (cardBack) {
+        const isCompleted = completedGoals === 1264 && totalGoals === 1264;
+        const wasCompleted = cardBack.classList.contains('completed');
+        
+        if (isCompleted && !wasCompleted) {
+          // 从未完成变为完成状态
+          cardBack.classList.add('completed');
+          createStars(cardBack);
+          // 背景五角星会通过CSS自动显示
+        } else if (!isCompleted && wasCompleted) {
+          // 从完成变为未完成状态
+          cardBack.classList.remove('completed');
+          removeStars(cardBack);
+          // 背景五角星会通过CSS自动隐藏
+        }
+        // 如果状态没有变化，不做任何操作
+      }
     } else {
       let totalFates = state.allFateData.length;
       let completedFates = 0;
@@ -2471,6 +2528,104 @@
     avatarImage.style.transform = 'none';
 
     localStorage.setItem('mcfate-avatar-scale', scale);
+  };
+
+  // 创建星星效果
+  const createStars = (cardBack) => {
+    // 移除现有的星星
+    removeStars(cardBack);
+    
+    // 创建15-20个星星
+    const starCount = Math.floor(Math.random() * 6) + 15; // 15-20个星星
+    
+    // 获取卡片尺寸
+    const cardRect = cardBack.getBoundingClientRect();
+    const cardWidth = cardRect.width;
+    const cardHeight = cardRect.height;
+    
+    // 定义可用区域（避开头像区域）
+    const avatarArea = { x: 0, y: 0, width: 140, height: 140 };
+    const margin = 20; // 边距
+    
+    // 计算可用区域
+    const availableWidth = cardWidth - margin * 2;
+    const availableHeight = cardHeight - margin * 2;
+    
+    // 创建网格分布点
+    const gridCols = 5; // 5列
+    const gridRows = 4; // 4行
+    const cellWidth = availableWidth / gridCols;
+    const cellHeight = availableHeight / gridRows;
+    
+    // 生成网格点并过滤掉头像区域内的点
+    const gridPoints = [];
+    for (let row = 0; row < gridRows; row++) {
+      for (let col = 0; col < gridCols; col++) {
+        const baseX = margin + col * cellWidth + cellWidth / 2;
+        const baseY = margin + row * cellHeight + cellHeight / 2;
+        
+        // 检查是否在头像区域内
+        const inAvatarArea = baseX < avatarArea.x + avatarArea.width && 
+                           baseY < avatarArea.y + avatarArea.height;
+        
+        if (!inAvatarArea) {
+          gridPoints.push({ x: baseX, y: baseY });
+        }
+      }
+    }
+    
+    // 随机打乱网格点顺序
+    for (let i = gridPoints.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [gridPoints[i], gridPoints[j]] = [gridPoints[j], gridPoints[i]];
+    }
+    
+    // 创建星星，使用网格点作为基础位置
+    for (let i = 0; i < Math.min(starCount, gridPoints.length); i++) {
+      const star = document.createElement('div');
+      star.className = 'star';
+      
+      // 在网格点基础上添加随机偏移
+      const point = gridPoints[i];
+      const offsetX = (Math.random() - 0.5) * cellWidth * 0.6; // 最大偏移为格子宽度的30%
+      const offsetY = (Math.random() - 0.5) * cellHeight * 0.6; // 最大偏移为格子高度的30%
+      
+      const x = Math.max(margin, Math.min(cardWidth - margin, point.x + offsetX));
+      const y = Math.max(margin, Math.min(cardHeight - margin, point.y + offsetY));
+      
+      star.style.left = x + 'px';
+      star.style.top = y + 'px';
+      
+      // 随机动画延迟
+      const delay = Math.random() * 3; // 0-3秒延迟
+      star.style.setProperty('--star-delay', delay + 's');
+      
+      cardBack.appendChild(star);
+      
+      // 添加渐入效果 - 每个星星有不同的延迟，营造自然出现的效果
+      setTimeout(() => {
+        star.classList.add('fade-in');
+      }, i * 50 + Math.random() * 200); // 50ms间隔 + 随机延迟
+    }
+  };
+
+  // 移除星星效果
+  const removeStars = (cardBack) => {
+    const stars = cardBack.querySelectorAll('.star');
+    
+    // 为每个星星添加渐出效果
+    stars.forEach((star, index) => {
+      // 添加渐出类
+      star.classList.remove('fade-in');
+      star.classList.add('fade-out');
+      
+      // 延迟移除DOM元素，等待渐出动画完成
+      setTimeout(() => {
+        if (star.parentNode) {
+          star.remove();
+        }
+      }, 800 + index * 30); // 800ms渐出时间 + 30ms间隔
+    });
   };
 
   // 暴露全局函数

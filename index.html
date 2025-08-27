@@ -52,6 +52,12 @@
             <div class="emergency-title">— 艾欧泽亚F.A.T.E处理许可证 —</div>
           </div>
           <div class="card-back">
+            <!-- 背景五角星装饰 -->
+            <div class="background-star">
+              <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <path d="M50 5 L61 35 L95 35 L68 55 L79 85 L50 65 L21 85 L32 55 L5 35 L39 35 Z"/>
+              </svg>
+            </div>
             <div class="info-content">
               <div class="avatar-section">
                 <div class="avatar" id="avatarContainer" aria-label="角色头像">
@@ -127,7 +133,12 @@
           <div id="filterDropdown" class="filter-dropdown hidden">
             <div class="filter-dropdown-content">
               <div class="filter-group">
-                <div class="filter-title">地图区域</div>
+                <div class="filter-title-container">
+                  <div class="filter-title">地图区域</div>
+                  <button class="filter-title-toggle-all" id="allMapsToggle" title="全选/取消全选所有地图">
+                    <i class="fas fa-check-double"></i>
+                  </button>
+                </div>
                 <div class="filter-sections">
                   <div class="filter-section">
                     <div class="section-header">
