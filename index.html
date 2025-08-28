@@ -45,6 +45,7 @@
       </div>
     </header>
     <section class="fate-body" id="fateBody">
+      <!-- 桌面端证件栏 -->
       <div class="card-container" onclick="flipCard()">
         <div class="flip-card" id="flipCard">
           <div class="card-front">
@@ -91,6 +92,53 @@
                   - 艾欧泽亚紧急事件处理协会制证 -
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 移动端证件栏 -->
+      <div class="mobile-card-container" id="mobileCardContainer">
+        <div class="mobile-card-header" id="mobileCardHeader">
+          <div class="mobile-card-title">艾欧泽亚F.A.T.E处理许可证</div>
+        </div>
+        <div class="mobile-card-content" id="mobileCardContent">
+          <!-- 移动端背景五角星装饰 -->
+          <div class="mobile-background-star">
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <path d="M50 5 L61 35 L95 35 L68 55 L79 85 L50 65 L21 85 L32 55 L5 35 L39 35 Z"/>
+            </svg>
+          </div>
+          <div class="mobile-avatar-section">
+            <div class="mobile-avatar" id="mobileAvatarContainer" aria-label="角色头像">
+              <img id="mobileAvatarImage" src="" alt="角色头像" style="display: none;">
+              <div class="mobile-avatar-placeholder">
+                <i class="fas fa-user"></i>
+              </div>
+            </div>
+            <input type="file" id="mobileAvatarUpload" accept="image/*" style="display: none;">
+          </div>
+          <div class="mobile-info-section">
+            <div class="mobile-info-grid">
+              <div class="mobile-info-item">
+                <div class="mobile-info-label">持证人</div>
+                <input type="text" class="mobile-info-input" id="mobileCardHolderName" value="点击修改昵称" placeholder="请输入角色名" maxlength="10">
+              </div>
+              <div class="mobile-info-item">
+                <div class="mobile-info-label">服务器</div>
+                <input type="text" class="mobile-info-input" id="mobileCardServerName" value="点击修改服务器" placeholder="请输入服务器" maxlength="10">
+              </div>
+              <div class="mobile-info-item">
+                <div class="mobile-info-label">称号</div>
+                <div class="mobile-info-value" id="mobileCardTitle">无</div>
+              </div>
+              <div class="mobile-info-item">
+                <div class="mobile-info-label">已完成目标</div>
+                <div class="mobile-info-value" id="mobileCardCompletionCount">0个</div>
+              </div>
+            </div>
+            <div class="mobile-certificate-info">
+              - 艾欧泽亚紧急事件处理协会制证 -
             </div>
           </div>
         </div>

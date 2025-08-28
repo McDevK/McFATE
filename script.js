@@ -2215,6 +2215,7 @@
 
   const updateCardCompletionCount = () => {
     const cardCompletionCount = document.getElementById('cardCompletionCount');
+    const mobileCardCompletionCount = document.getElementById('mobileCardCompletionCount');
     const cardBack = document.querySelector('.card-back');
     if (!cardCompletionCount || !state.allFateData) return;
     
@@ -2232,10 +2233,16 @@
         }
       });
       
-      cardCompletionCount.textContent = `${completedGoals}/${totalGoals}`;
+      const completionText = `${completedGoals}/${totalGoals}`;
+      cardCompletionCount.textContent = completionText;
+      if (mobileCardCompletionCount) {
+        mobileCardCompletionCount.textContent = completionText;
+      }
       updateCardTitle(completedGoals);
       
       // 检查是否达到1264/1264，添加星星效果
+      const mobileCardContainer = document.getElementById('mobileCardContainer');
+      
       if (cardBack) {
         const isCompleted = completedGoals === 1264 && totalGoals === 1264;
         const wasCompleted = cardBack.classList.contains('completed');
@@ -2245,11 +2252,21 @@
           cardBack.classList.add('completed');
           createStars(cardBack);
           // 背景五角星会通过CSS自动显示
+          
+          // 移动端也添加完成状态
+          if (mobileCardContainer) {
+            mobileCardContainer.classList.add('completed');
+          }
         } else if (!isCompleted && wasCompleted) {
           // 从完成变为未完成状态
           cardBack.classList.remove('completed');
           removeStars(cardBack);
           // 背景五角星会通过CSS自动隐藏
+          
+          // 移动端也移除完成状态
+          if (mobileCardContainer) {
+            mobileCardContainer.classList.remove('completed');
+          }
         }
         // 如果状态没有变化，不做任何操作
       }
@@ -2271,41 +2288,77 @@
         }
       });
       
-      cardCompletionCount.textContent = `${completedFates}/${totalFates}`;
+      const completionText = `${completedFates}/${totalFates}`;
+      cardCompletionCount.textContent = completionText;
+      if (mobileCardCompletionCount) {
+        mobileCardCompletionCount.textContent = completionText;
+      }
     }
   };
 
   const updateCardTitle = (completedGoals) => {
     const cardTitle = document.getElementById('cardTitle');
-    if (!cardTitle) return;
+    const mobileCardTitle = document.getElementById('mobileCardTitle');
     
+    let titleText = '无';
     if (completedGoals >= 1000) {
-      cardTitle.textContent = '危机平定者';
+      titleText = '危机平定者';
     } else if (completedGoals >= 500) {
-      cardTitle.textContent = '危机践行者';
+      titleText = '危机践行者';
     } else if (completedGoals >= 200) {
-      cardTitle.textContent = '危机洞察者';
-    } else {
-      cardTitle.textContent = '无';
+      titleText = '危机洞察者';
+    }
+    
+    if (cardTitle) {
+      cardTitle.textContent = titleText;
+    }
+    if (mobileCardTitle) {
+      mobileCardTitle.textContent = titleText;
     }
   };
 
   const initCardInputs = () => {
     const cardHolderName = document.getElementById('cardHolderName');
     const cardServerName = document.getElementById('cardServerName');
+    const mobileCardHolderName = document.getElementById('mobileCardHolderName');
+    const mobileCardServerName = document.getElementById('mobileCardServerName');
 
     const savedName = localStorage.getItem('mcfate-card-holder-name');
     const savedServer = localStorage.getItem('mcfate-card-server-name');
     
-    if (savedName) cardHolderName.value = savedName;
-    if (savedServer) cardServerName.value = savedServer;
+    if (savedName) {
+      cardHolderName.value = savedName;
+      mobileCardHolderName.value = savedName;
+    }
+    if (savedServer) {
+      cardServerName.value = savedServer;
+      mobileCardServerName.value = savedServer;
+    }
 
+    // 桌面端输入事件
     cardHolderName.addEventListener('input', (e) => {
-      localStorage.setItem('mcfate-card-holder-name', e.target.value);
+      const value = e.target.value;
+      localStorage.setItem('mcfate-card-holder-name', value);
+      mobileCardHolderName.value = value; // 同步到移动端
     });
 
     cardServerName.addEventListener('input', (e) => {
-      localStorage.setItem('mcfate-card-server-name', e.target.value);
+      const value = e.target.value;
+      localStorage.setItem('mcfate-card-server-name', value);
+      mobileCardServerName.value = value; // 同步到移动端
+    });
+
+    // 移动端输入事件
+    mobileCardHolderName.addEventListener('input', (e) => {
+      const value = e.target.value;
+      localStorage.setItem('mcfate-card-holder-name', value);
+      cardHolderName.value = value; // 同步到桌面端
+    });
+
+    mobileCardServerName.addEventListener('input', (e) => {
+      const value = e.target.value;
+      localStorage.setItem('mcfate-card-server-name', value);
+      cardServerName.value = value; // 同步到桌面端
     });
 
     cardHolderName.addEventListener('click', (e) => {
@@ -2316,13 +2369,25 @@
       e.stopPropagation();
     });
 
+    mobileCardHolderName.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
+    mobileCardServerName.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
     initAvatar();
+    initMobileCardToggle();
   };
 
   const initAvatar = () => {
     const avatarContainer = document.getElementById('avatarContainer');
     const avatarImage = document.getElementById('avatarImage');
     const avatarUpload = document.getElementById('avatarUpload');
+    const mobileAvatarContainer = document.getElementById('mobileAvatarContainer');
+    const mobileAvatarImage = document.getElementById('mobileAvatarImage');
+    const mobileAvatarUpload = document.getElementById('mobileAvatarUpload');
     const avatarModal = document.getElementById('avatarModal');
     const avatarCropImage = document.getElementById('avatarCropImage');
     const avatarModalClose = document.getElementById('avatarModalClose');
@@ -2334,8 +2399,13 @@
       avatarImage.src = savedAvatar;
       avatarImage.style.display = 'block';
       document.querySelector('.avatar-placeholder').style.display = 'none';
+      
+      mobileAvatarImage.src = savedAvatar;
+      mobileAvatarImage.style.display = 'block';
+      document.querySelector('.mobile-avatar-placeholder').style.display = 'none';
     }
 
+    // 桌面端头像事件
     avatarContainer.addEventListener('click', (e) => {
       e.stopPropagation();
       e.preventDefault();
@@ -2347,6 +2417,21 @@
     });
 
     avatarContainer.addEventListener('mouseup', (e) => {
+      e.stopPropagation();
+    });
+
+    // 移动端头像事件
+    mobileAvatarContainer.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      mobileAvatarUpload.click();
+    });
+
+    mobileAvatarContainer.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+    });
+
+    mobileAvatarContainer.addEventListener('mouseup', (e) => {
       e.stopPropagation();
     });
 
@@ -2365,7 +2450,21 @@
       });
     }
 
+    // 桌面端文件上传事件
     avatarUpload.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          openAvatarModal(e.target.result);
+        };
+        reader.readAsDataURL(file);
+      }
+      e.target.value = '';
+    });
+
+    // 移动端文件上传事件
+    mobileAvatarUpload.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) {
         const reader = new FileReader();
@@ -2485,6 +2584,8 @@
     const avatarCropImage = document.getElementById('avatarCropImage');
     const avatarImage = document.getElementById('avatarImage');
     const avatarPlaceholder = document.querySelector('.avatar-placeholder');
+    const mobileAvatarImage = document.getElementById('mobileAvatarImage');
+    const mobileAvatarPlaceholder = document.querySelector('.mobile-avatar-placeholder');
 
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -2521,9 +2622,15 @@
     
     localStorage.setItem('mcfate-avatar-data', croppedImageData);
 
+    // 更新桌面端头像
     avatarImage.src = croppedImageData;
     avatarImage.style.display = 'block';
     avatarPlaceholder.style.display = 'none';
+
+    // 更新移动端头像
+    mobileAvatarImage.src = croppedImageData;
+    mobileAvatarImage.style.display = 'block';
+    mobileAvatarPlaceholder.style.display = 'none';
 
     avatarImage.style.transform = 'none';
 
@@ -2625,6 +2732,29 @@
           star.remove();
         }
       }, 800 + index * 30); // 800ms渐出时间 + 30ms间隔
+    });
+  };
+
+  // 移动端证件栏切换功能
+  const initMobileCardToggle = () => {
+    const mobileCardHeader = document.getElementById('mobileCardHeader');
+    const mobileCardContainer = document.getElementById('mobileCardContainer');
+    
+    if (!mobileCardHeader || !mobileCardContainer) return;
+    
+    // 默认设置为折叠状态
+    mobileCardContainer.classList.add('collapsed');
+    
+    mobileCardHeader.addEventListener('click', () => {
+      const isCollapsed = mobileCardContainer.classList.contains('collapsed');
+      
+      if (isCollapsed) {
+        // 展开证件栏
+        mobileCardContainer.classList.remove('collapsed');
+      } else {
+        // 折叠证件栏
+        mobileCardContainer.classList.add('collapsed');
+      }
     });
   };
 
