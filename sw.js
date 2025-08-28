@@ -1,5 +1,5 @@
 // McFATE Service Worker (优化版)
-const CACHE_NAME = 'mcfate-v2.0.5.12';
+const CACHE_NAME = 'mcfate-v2.0.5.13';
 const urlsToCache = [
   './', './styles.css', './script.js',
   './assets/icons/favicon/favicon.png',
@@ -14,12 +14,22 @@ const urlsToCache = [
   './assets/icons/img/fatal.png',
   './assets/icons/img/fever.png',
   './assets/icons/img/power.png',
-  './assets/icons/img/weather/sunny.png',
-  './assets/icons/img/weather/rainy.png',
-  './assets/icons/img/weather/cloudy.png',
-  './assets/icons/img/weather/snowy.png',
-  './assets/icons/img/weather/windy.png',
-  './assets/icons/img/weather/foggy.png',
+  // 天气图标 - 修正路径
+  './assets/icons/weather/薄雾.png',
+  './assets/icons/weather/暴雪.png',
+  './assets/icons/weather/暴雨.png',
+  './assets/icons/weather/碧空.png',
+  './assets/icons/weather/打雷.png',
+  './assets/icons/weather/雷雨.png',
+  './assets/icons/weather/强风.png',
+  './assets/icons/weather/晴朗.png',
+  './assets/icons/weather/热浪.png',
+  './assets/icons/weather/微风.png',
+  './assets/icons/weather/小雪.png',
+  './assets/icons/weather/小雨.png',
+  './assets/icons/weather/扬沙.png',
+  './assets/icons/weather/妖雾.png',
+  './assets/icons/weather/阴云.png',
   'https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
 ];
