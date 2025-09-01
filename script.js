@@ -341,6 +341,95 @@
     return processedText;
   };
 
+  // 运行时映射：根据倒计时目标(g)匹配全量列表中的第几个"危命目标"
+  // 返回对应 list 视图的已完成键（key）或 null
+  const getLinkedListGoalKey = (fate, goalObj) => {
+    try {
+      const goalsText = String(fate.危命目标 || '').trim();
+      if (!goalsText) return null;
+      const lines = goalsText
+        .split(/\n+/)
+        .map(s => s.replace(/^\d+\./, '').trim())
+        .filter(Boolean);
+
+      // 解析倒计时目标中的天气与时间需求
+      const weatherReq = String(goalObj.weatherReq || '').trim();
+      const timeReq = String(goalObj.timeReq || '').trim();
+
+      // 允许的天气（中文名）集合，按 | 分割（已在上游拆掉 & 场景）
+      const allowWeathers = weatherReq ? weatherReq.split('|').map(w => w.trim()).filter(Boolean) : [];
+
+      // 天气组合组标记（用于匹配文案中的“晴天/雨天”等集合词）
+      const rainySet = new Set(['小雨', '雷雨', '暴雨']);
+      const sunnySet = new Set(['碧空', '晴朗']);
+      const needRainyGroup = allowWeathers.some(w => rainySet.has(w));
+      const needSunnyGroup = allowWeathers.some(w => sunnySet.has(w));
+
+      // 时间需求标记
+      const needDay = /白天/.test(timeReq);
+      const needNight = /夜晚/.test(timeReq);
+
+      // 逐行尝试匹配：满足该倒计时目标所要求的关键词
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        let ok = true;
+
+        if (allowWeathers.length > 0) {
+          const hasExplicitWeather = allowWeathers.some(cn => line.includes(cn));
+          const hasGroupWeather = (needRainyGroup && (line.includes('雨天') || line.includes('下雨'))) ||
+                                  (needSunnyGroup && line.includes('晴天'));
+          if (!(hasExplicitWeather || hasGroupWeather)) ok = false;
+        }
+
+        if (!ok) continue;
+
+        if (needDay && !line.includes('白天')) ok = false;
+        if (needNight && !line.includes('夜晚')) ok = false;
+        if (!ok) continue;
+
+        // 找到匹配行，返回对应的 list-goal key（与全量列表的键一致）
+        const listKey = `${fate.地图}|${fate.名称}|list-goal|${i}`;
+        return listKey;
+      }
+    } catch (e) {
+      console.warn('匹配全量目标索引失败:', e);
+    }
+    return null;
+  };
+
+  // 根据倒计时视图的规则，为某个 FATE 构建目标数组（与渲染时一致）
+  const buildCountdownGoals = (fate) => {
+    const goals = [];
+    const appearWeather = fate.出现天气 || '';
+    const appearStart = fate.出现时间 || '';
+    const appearEnd = fate.消失时间 || '';
+
+    if (fate.目标需求天气 && /^\s*&/.test(String(fate.目标需求时间 || ''))) {
+      const pureTime = String(fate.目标需求时间).replace(/^\s*&\s*/, '');
+      goals.push({ weatherReq: String(fate.目标需求天气).trim(), timeReq: pureTime, isCombined: true });
+    }
+
+    if (fate.目标需求天气 && !/^\s*&/.test(String(fate.目标需求时间 || ''))) {
+      const weatherStr = String(fate.目标需求天气).trim();
+      if (weatherStr.includes('&')) {
+        weatherStr.split('&').map(s => s.trim()).filter(Boolean).forEach(part => {
+          goals.push({ weatherReq: part });
+        });
+      } else {
+        goals.push({ weatherReq: weatherStr });
+      }
+    }
+
+    if (fate.目标需求时间 && !/^\s*&/.test(String(fate.目标需求时间))) {
+      goals.push({ timeReq: String(fate.目标需求时间).trim() });
+    }
+
+    if (goals.length === 0) {
+      goals.push({});
+    }
+    return goals;
+  };
+
   const exportLocalData = () => {
     const data = {};
     EXPORT_KEYS.forEach(k => {
@@ -723,11 +812,42 @@
       if (!item) return;
       const goals = Array.from(item.querySelectorAll('.goal-block'));
       if (goals.length === 0) return;
-      const anyUnfinished = goals.some(g => !state.completedGoals.has(g.getAttribute('data-goal')));
+      // 以“目标键 + 关联的全量列表键（缺失则现场计算）”共同判断完成与否
+      const mapName = item.getAttribute('data-map') || '';
+      const fateName = item.getAttribute('data-name') || '';
+      const fateObj = state.fateData.find(f => f.名称 === fateName && f.地图 === mapName);
+      const builtGoals = fateObj ? buildCountdownGoals(fateObj) : [];
+      const anyUnfinished = goals.some(g => {
+        const k = g.getAttribute('data-goal') || '';
+        let lk = g.getAttribute('data-listkey') || '';
+        if (!lk && fateObj) {
+          const gi = parseInt(g.getAttribute('data-gidx') || '-1', 10);
+          if (!Number.isNaN(gi) && gi >= 0 && gi < builtGoals.length) {
+            const tmp = getLinkedListGoalKey(fateObj, builtGoals[gi]);
+            if (tmp) lk = tmp;
+          }
+        }
+        const done = state.completedGoals.has(k) || (lk ? state.completedGoals.has(lk) : false);
+        return !done;
+      });
       goals.forEach(g => {
         const k = g.getAttribute('data-goal');
         if (!k) return;
-        if (anyUnfinished) state.completedGoals.add(k); else state.completedGoals.delete(k);
+        let lk = g.getAttribute('data-listkey');
+        if (!lk && fateObj) {
+          const gi = parseInt(g.getAttribute('data-gidx') || '-1', 10);
+          if (!Number.isNaN(gi) && gi >= 0 && gi < builtGoals.length) {
+            const tmp = getLinkedListGoalKey(fateObj, builtGoals[gi]);
+            if (tmp) lk = tmp;
+          }
+        }
+        if (anyUnfinished) {
+          state.completedGoals.add(k);
+          if (lk) state.completedGoals.add(lk);
+        } else {
+          state.completedGoals.delete(k);
+          if (lk) state.completedGoals.delete(lk);
+        }
       });
       persistCompleted();
       renderFateList();
@@ -1426,12 +1546,15 @@
       // 检查每个目标的完成状态
       const allCompleted = goals.every((g, idx) => {
         const goalKey = `${fate.地图}|${fate.名称}|goal|${idx}|${g.weatherReq || ''}|${g.timeReq || ''}`;
-        return state.completedGoals.has(goalKey);
+        const linkedListKey = getLinkedListGoalKey(fate, g);
+        return state.completedGoals.has(goalKey) || (linkedListKey ? state.completedGoals.has(linkedListKey) : false);
       });
       
       const hasUncompleted = goals.some((g, idx) => {
         const goalKey = `${fate.地图}|${fate.名称}|goal|${idx}|${g.weatherReq || ''}|${g.timeReq || ''}`;
-        return !state.completedGoals.has(goalKey);
+        const linkedListKey = getLinkedListGoalKey(fate, g);
+        const isDone = state.completedGoals.has(goalKey) || (linkedListKey ? state.completedGoals.has(linkedListKey) : false);
+        return !isDone;
       });
       
       // 如果只显示已完成，但FATE有未完成的目标，则过滤掉
@@ -1487,7 +1610,8 @@
         // 检查是否所有目标都已完成
         const allCompleted = goals.every((g, idx) => {
           const goalKey = `${fate.地图}|${fate.名称}|goal|${idx}|${g.weatherReq || ''}|${g.timeReq || ''}`;
-          return state.completedGoals.has(goalKey);
+          const linkedListKey = getLinkedListGoalKey(fate, g);
+          return state.completedGoals.has(goalKey) || (linkedListKey ? state.completedGoals.has(linkedListKey) : false);
         });
 
         // 返回未完成的FATE
@@ -1584,7 +1708,8 @@
 
       goals.forEach((g, idx) => {
         const goalKey = `${fate.地图}|${fate.名称}|goal|${idx}|${g.weatherReq || ''}|${g.timeReq || ''}`;
-        const isCompleted = state.completedGoals.has(goalKey);
+        const linkedListKey = getLinkedListGoalKey(fate, g);
+        const isCompleted = state.completedGoals.has(goalKey) || (linkedListKey ? state.completedGoals.has(linkedListKey) : false);
         
         // 只对有意义的配置进行倒计时计算
         const hasMeaningfulConfig = (appearStart && appearEnd) || g.weatherReq || g.timeReq || appearWeather;
@@ -1642,9 +1767,9 @@
         const text = isCompleted ? '已完成' : (cd ? cd.text : '—');
         const id = goalKey;
         const html = `
-          <div class=\"fate-item ${isCompleted ? 'goal-completed' : ''}\"> 
+          <div class=\"fate-item ${isCompleted ? 'goal-completed' : ''}\" data-map=\"${fate.地图}\" data-name=\"${fate.名称}\"> 
             ${baseInfoHtml()} 
-            <div class=\"goal-block ${isCompleted ? 'completed' : ''}\" data-goal=\"${goalKey}\"> 
+            <div class=\"goal-block ${isCompleted ? 'completed' : ''}\" data-goal=\"${goalKey}\" data-listkey=\"${linkedListKey || ''}\" data-gidx=\"${idx}\"> 
               <div class=\"goal-left\">${leftLines.join('')}</div>
               <div class=\"goal-right\"><span class=\"goal-countdown ${statusClass}\">${text}</span></div>
             </div>
